@@ -6,6 +6,7 @@ import 'screens/alarm_challenge_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/setup_screen.dart';
 import 'services/alarm_service.dart';
+import 'services/pattern_storage.dart';
 
 class ShiftlyApp extends StatefulWidget {
   const ShiftlyApp({super.key});
@@ -18,17 +19,29 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   final navigatorKey = GlobalKey<NavigatorState>();
   WorkPattern? pattern;
   bool editing = false;
+  bool loaded = false;
   int? activeAlarmId;
   StreamSubscription<dynamic>? ringingSubscription;
 
   @override
   void initState() {
     super.initState();
+    _loadPattern();
     ringingSubscription = Alarm.ringing.listen((alarmSet) {
       for (final alarm in alarmSet.alarms) {
         _openChallenge(alarm.id);
         break;
       }
+    });
+  }
+
+  Future<void> _loadPattern() async {
+    final saved = await PatternStorage.load();
+    if (!mounted) return;
+    setState(() {
+      pattern = saved;
+      loaded = true;
+      editing = false;
     });
   }
 
@@ -56,6 +69,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   }
 
   Future<void> _savePattern(WorkPattern value) async {
+    await PatternStorage.save(value);
     await AlarmService.replacePatternAlarms(value);
     if (!mounted) return;
     setState(() {
@@ -99,12 +113,21 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
       ),
       builder: (context, child) =>
           Directionality(textDirection: TextDirection.rtl, child: child!),
-      home: pattern == null || editing
-          ? SetupScreen(onSaved: _savePattern)
-          : MainShell(
+      home: !loaded
+          ? const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            )
+          : pattern == null || editing
+              ? SetupScreen(
+                  onSaved: _savePattern,
+                  onCancel: pattern == null
+                      ? null
+                      : () => setState(() => editing = false),
+                )
+              : MainShell(
               pattern: pattern!,
-              onEditPattern: () => setState(() => editing = true),
-            ),
+                  onEditPattern: () => setState(() => editing = true),
+                ),
     );
   }
 }
