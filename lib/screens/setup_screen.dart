@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/work_pattern.dart';
+import '../services/ringtone_service.dart';
 
 class SetupScreen extends StatefulWidget {
   const SetupScreen({super.key, required this.onSaved});
@@ -30,6 +31,7 @@ class _SetupScreenState extends State<SetupScreen> {
   TimeOfDay _startTime = TimeOfDay.now();
   int _step = 0;
   List<_ShiftDraft> _drafts = [];
+  RingtoneChoice _ringtone = RingtoneChoice.systemDefault;
 
   @override
   void dispose() {
@@ -128,6 +130,8 @@ class _SetupScreenState extends State<SetupScreen> {
       offMinutes: int.parse(_offController.text) * 60,
       alarmBeforeMinutes: int.parse(_alarmController.text),
       shifts: shifts,
+      ringtonePath: _ringtone.path,
+      ringtoneName: _ringtone.name,
     ));
   }
 
@@ -182,6 +186,17 @@ class _SetupScreenState extends State<SetupScreen> {
             const SizedBox(height: 14),
             _numberField(_alarmController, 'التنبيه قبل الشِفت',
                 'بالدقائق', Icons.alarm_rounded, allowZero: true),
+            const SizedBox(height: 14),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.music_note_rounded, color: violet),
+                title: const Text('نغمة المنبّه'),
+                subtitle: Text(_ringtone.name,
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                trailing: const Icon(Icons.chevron_left_rounded),
+                onTap: _chooseRingtone,
+              ),
+            ),
             const SizedBox(height: 18),
             Card(
               child: Column(children: [
@@ -327,6 +342,59 @@ class _SetupScreenState extends State<SetupScreen> {
           return null;
         },
       );
+
+  Future<void> _chooseRingtone() async {
+    final choice = await showModalBottomSheet<int>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const ListTile(
+              title: Text('اختر نغمة المنبّه',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.alarm_rounded),
+              title: const Text('نغمة الهاتف الافتراضية'),
+              onTap: () => Navigator.pop(context, 0),
+            ),
+            ListTile(
+              leading: const Icon(Icons.library_music_rounded),
+              title: const Text('اختيار من نغمات المنبّه'),
+              subtitle: const Text('يعرض قائمة نغمات Android'),
+              onTap: () => Navigator.pop(context, 1),
+            ),
+            ListTile(
+              leading: const Icon(Icons.video_file_rounded),
+              title: const Text('اختيار صوت أو فيديو'),
+              subtitle: const Text('يُستخرج الصوت من الفيديو تلقائيًا'),
+              onTap: () => Navigator.pop(context, 2),
+            ),
+          ]),
+        ),
+      ),
+    );
+
+    if (choice == null) return;
+    if (choice == 0) {
+      setState(() => _ringtone = RingtoneChoice.systemDefault);
+      return;
+    }
+
+    try {
+      final selected = choice == 1
+          ? await RingtoneService.pickSystemRingtone()
+          : await RingtoneService.pickMediaTone();
+      if (selected != null && mounted) {
+        setState(() => _ringtone = selected);
+      }
+    } catch (_) {
+      if (mounted) {
+        _error('تعذر قراءة النغمة المختارة، جرّب ملفًا آخر');
+      }
+    }
+  }
 
   Widget _progress(int number, String title) => Row(children: [
         Container(
