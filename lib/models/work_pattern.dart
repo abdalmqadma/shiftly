@@ -17,6 +17,8 @@ class WorkPattern {
     required this.offMinutes,
     required this.alarmBeforeMinutes,
     required this.shifts,
+    this.ringtonePath,
+    this.ringtoneName = 'نغمة المنبّه الافتراضية',
   });
 
   final DateTime cycleStart;
@@ -24,6 +26,8 @@ class WorkPattern {
   final int offMinutes;
   final int alarmBeforeMinutes;
   final List<WorkShift> shifts;
+  final String? ringtonePath;
+  final String ringtoneName;
 
   int get cycleMinutes => dutyMinutes + offMinutes;
 }
