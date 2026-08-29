@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/work_pattern.dart';
+import '../services/alarm_service.dart';
 import 'calendar_screen.dart';
 import 'home_screen.dart';
 
@@ -84,6 +85,25 @@ class _MainShellState extends State<MainShell> {
               '${widget.pattern.shifts.length} شِفتات داخل دورة مدتها ${widget.pattern.cycleMinutes ~/ 60} ساعة'),
           trailing: const Icon(Icons.chevron_left_rounded),
           onTap: widget.onEditPattern,
+        ),
+      ),
+      const SizedBox(height: 12),
+      Card(
+        child: ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          leading: const Icon(Icons.alarm_on_rounded, color: violet),
+          title: const Text('اختبار المنبّه',
+              style: TextStyle(fontWeight: FontWeight.w800)),
+          subtitle: const Text('يرن بعد دقيقة ويطلب تحدي الحساب'),
+          trailing: const Icon(Icons.play_arrow_rounded),
+          onTap: () async {
+            await AlarmService.scheduleTestAlarm();
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('تم ضبط الاختبار بعد دقيقة')),
+            );
+          },
         ),
       ),
     ],
