@@ -48,6 +48,7 @@ class MainActivity : FlutterActivity() {
             )
             putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
             putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         startActivityForResult(intent, ringtoneRequest)
     }
@@ -111,13 +112,28 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun copySystemRingtone(uri: Uri): Map<String, String> {
-        val title = RingtoneManager.getRingtone(this, uri)
+        val defaultUri = RingtoneManager.getDefaultUri(
+            RingtoneManager.TYPE_ALARM
+        )
+        val sourceUri = if (uri == defaultUri) {
+            RingtoneManager.getActualDefaultRingtoneUri(
+                this,
+                RingtoneManager.TYPE_ALARM
+            ) ?: uri
+        } else {
+            uri
+        }
+
+        val title = RingtoneManager.getRingtone(this, sourceUri)
             ?.getTitle(this)
             ?: "نغمة من الهاتف"
         val target = newToneFile("system_tone", ".ogg")
-        contentResolver.openInputStream(uri).use { input ->
-            requireNotNull(input) { "Unable to open ringtone" }
-            target.outputStream().use { output -> input.copyTo(output) }
+        val descriptor = contentResolver.openAssetFileDescriptor(sourceUri, "r")
+            ?: error("Unable to open ringtone")
+        descriptor.use {
+            it.createInputStream().use { input ->
+                target.outputStream().use { output -> input.copyTo(output) }
+            }
         }
         return mapOf("path" to target.absolutePath, "name" to title)
     }
