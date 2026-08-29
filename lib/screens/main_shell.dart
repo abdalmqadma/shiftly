@@ -39,7 +39,7 @@ class _MainShellState extends State<MainShell> {
             height: 34,
             decoration: BoxDecoration(
                 color: violet, borderRadius: BorderRadius.circular(11)),
-            child: const Icon(Icons.timelapse_rounded,
+            child: const Icon(Icons.alarm_rounded,
                 color: Colors.white, size: 21),
           ),
           const SizedBox(width: 10),
