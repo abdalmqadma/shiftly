@@ -3,8 +3,14 @@ import '../models/work_pattern.dart';
 import '../services/ringtone_service.dart';
 
 class SetupScreen extends StatefulWidget {
-  const SetupScreen({super.key, required this.onSaved});
+  const SetupScreen({
+    super.key,
+    required this.onSaved,
+    this.onCancel,
+  });
+
   final ValueChanged<WorkPattern> onSaved;
+  final VoidCallback? onCancel;
 
   @override
   State<SetupScreen> createState() => _SetupScreenState();
@@ -142,7 +148,12 @@ class _SetupScreenState extends State<SetupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: widget.onCancel == null,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) widget.onCancel?.call();
+      },
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('إعداد جدولك',
             style: TextStyle(fontWeight: FontWeight.w900)),
@@ -150,9 +161,15 @@ class _SetupScreenState extends State<SetupScreen> {
             ? IconButton(
                 onPressed: () => setState(() => _step = 0),
                 icon: const Icon(Icons.arrow_forward_rounded))
-            : null,
+            : widget.onCancel == null
+                ? null
+                : IconButton(
+                    tooltip: 'إلغاء التعديل',
+                    onPressed: widget.onCancel,
+                    icon: const Icon(Icons.close_rounded)),
       ),
       body: SafeArea(child: _step == 0 ? _basicStep() : _shiftsStep()),
+    ),
     );
   }
 
