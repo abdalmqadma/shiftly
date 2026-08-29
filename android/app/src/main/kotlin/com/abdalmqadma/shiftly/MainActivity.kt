@@ -169,17 +169,18 @@ class MainActivity : FlutterActivity() {
         require(audioTrack >= 0 && format != null) {
             "The selected video has no audio track"
         }
+        val selectedFormat = requireNotNull(format)
 
         extractor.selectTrack(audioTrack)
         val muxer = MediaMuxer(
             target.absolutePath,
             MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4
         )
-        val outputTrack = muxer.addTrack(format)
+        val outputTrack = muxer.addTrack(selectedFormat)
         muxer.start()
 
-        val maxSize = if (format.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) {
-            format.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE)
+        val maxSize = if (selectedFormat.containsKey(MediaFormat.KEY_MAX_INPUT_SIZE)) {
+            selectedFormat.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE)
         } else {
             1024 * 1024
         }
