@@ -92,13 +92,27 @@ class _MainShellState extends State<MainShell> {
         child: ListTile(
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          leading: const Icon(Icons.music_note_rounded, color: violet),
+          title: const Text('نغمة المنبّه',
+              style: TextStyle(fontWeight: FontWeight.w800)),
+          subtitle: Text(widget.pattern.ringtoneName,
+              maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+      ),
+      const SizedBox(height: 12),
+      Card(
+        child: ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
           leading: const Icon(Icons.alarm_on_rounded, color: violet),
           title: const Text('اختبار المنبّه',
               style: TextStyle(fontWeight: FontWeight.w800)),
           subtitle: const Text('يرن بعد دقيقة ويطلب تحدي الحساب'),
           trailing: const Icon(Icons.play_arrow_rounded),
           onTap: () async {
-            await AlarmService.scheduleTestAlarm();
+            await AlarmService.scheduleTestAlarm(
+              audioPath: widget.pattern.ringtonePath,
+            );
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('تم ضبط الاختبار بعد دقيقة')),
