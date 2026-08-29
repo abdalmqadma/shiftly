@@ -321,8 +321,8 @@ class _SetupScreenState extends State<SetupScreen> {
           if (number == null || (allowZero ? number < 0 : number <= 0)) {
             return 'أدخل رقمًا صحيحًا';
           }
-          if (label.contains('شِفت') && number > 20) {
-            return 'الحد الأقصى 20';
+          if (identical(controller, _countController) && number > 20) {
+            return 'الحد الأقصى لعدد الشِفتات هو 20';
           }
           return null;
         },
