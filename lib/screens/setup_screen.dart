@@ -63,8 +63,23 @@ class _SetupScreenState extends State<SetupScreen> {
     setState(() => start ? draft.start = value : draft.end = value);
   }
 
-  int _offset(int day, TimeOfDay time) =>
-      (day - 1) * 1440 + time.hour * 60 + time.minute;
+  int _offset(int day, TimeOfDay time) {
+    final cycleStart = DateTime(
+      _startDate.year,
+      _startDate.month,
+      _startDate.day,
+      _startTime.hour,
+      _startTime.minute,
+    );
+    final moment = DateTime(
+      _startDate.year,
+      _startDate.month,
+      _startDate.day + day - 1,
+      time.hour,
+      time.minute,
+    );
+    return moment.difference(cycleStart).inMinutes;
+  }
 
   void _save() {
     final dutyMinutes = int.parse(_dutyController.text) * 60;
@@ -73,6 +88,10 @@ class _SetupScreenState extends State<SetupScreen> {
     for (final draft in _drafts) {
       final start = _offset(draft.startDay, draft.start);
       final end = _offset(draft.endDay, draft.end);
+      if (start < 0) {
+        _error('الشِفت رقم ${draft.index + 1} يبدأ قبل بداية الدورة');
+        return;
+      }
       if (end <= start) {
         _error('نهاية الشِفت رقم ${draft.index + 1} يجب أن تكون بعد بدايته');
         return;
@@ -260,7 +279,10 @@ class _SetupScreenState extends State<SetupScreen> {
       );
 
   Widget _dayPicker(_ShiftDraft draft, bool start) {
-    final dutyDays = (int.parse(_dutyController.text) / 24).ceil();
+    final dutyMinutes = int.parse(_dutyController.text) * 60;
+    final startMinute = _startTime.hour * 60 + _startTime.minute;
+    final dutyDays = ((startMinute + dutyMinutes + 1439) ~/ 1440)
+        .clamp(1, 30);
     final value = start ? draft.startDay : draft.endDay;
     return DropdownButtonFormField<int>(
       initialValue: value,
