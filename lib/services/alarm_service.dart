@@ -41,6 +41,7 @@ class AlarmService {
             id: _idFor(alarmTime),
             dateTime: alarmTime,
             title: shift.name,
+            audioPath: pattern.ringtonePath,
           );
           scheduled++;
           if (scheduled == 40) break;
@@ -50,21 +51,28 @@ class AlarmService {
     }
   }
 
-  static Future<void> scheduleTestAlarm() async {
+  static Future<void> scheduleTestAlarm({String? audioPath}) async {
     await requestPermissions();
     final time = DateTime.now().add(const Duration(minutes: 1));
-    await _set(id: _idFor(time), dateTime: time, title: 'منبّه تجريبي');
+    await _set(
+      id: _idFor(time),
+      dateTime: time,
+      title: 'منبّه تجريبي',
+      audioPath: audioPath,
+    );
   }
 
   static Future<void> _set({
     required int id,
     required DateTime dateTime,
     required String title,
+    String? audioPath,
   }) async {
     await Alarm.set(
       alarmSettings: AlarmSettings(
         id: id,
         dateTime: dateTime,
+        assetAudioPath: audioPath,
         loopAudio: true,
         vibrate: true,
         androidFullScreenIntent: true,
