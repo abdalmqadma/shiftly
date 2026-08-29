@@ -1,11 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shiftly/main.dart';
+import 'package:shiftly/app.dart';
 
 void main() {
-  testWidgets('Shiftly opens with an empty setup state', (tester) async {
+  testWidgets('Shiftly starts with schedule setup', (tester) async {
     await tester.pumpWidget(const ShiftlyApp());
-    expect(find.text('Shiftly'), findsOneWidget);
-    expect(find.text('ابدأ بإنشاء جدولك'), findsOneWidget);
-    expect(find.text('إنشاء أول دورة'), findsOneWidget);
+    expect(find.text('كيف يعمل دوامك؟'), findsOneWidget);
+    expect(find.text('التالي: مواعيد الشِفتات'), findsOneWidget);
   });
 }
