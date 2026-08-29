@@ -29,11 +29,10 @@ class PatternStorage {
   }
 
   static Future<WorkPattern?> load() async {
-    final preferences = await SharedPreferences.getInstance();
-    final source = preferences.getString(_key);
-    if (source == null) return null;
-
     try {
+      final preferences = await SharedPreferences.getInstance();
+      final source = preferences.getString(_key);
+      if (source == null) return null;
       final json = jsonDecode(source) as Map<String, dynamic>;
       final shifts = (json['shifts'] as List<dynamic>)
           .map((item) {
