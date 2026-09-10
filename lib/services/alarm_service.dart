@@ -2,9 +2,11 @@ import 'dart:io';
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../models/shift_exception.dart';
 import '../models/wake_alarm.dart';
 import '../models/work_pattern.dart';
 import 'alarm_storage.dart';
+import 'shift_exception_storage.dart';
 
 class AlarmReadiness {
   const AlarmReadiness({
@@ -55,13 +57,31 @@ class AlarmService {
 
   static Future<void> stopWakeAlarm(int id) => Alarm.stop(id);
 
+  static Future<void> scheduleShiftException(
+    ShiftException exception, {
+    String? audioPath,
+  }) async {
+    if (!exception.alarmTime.isAfter(DateTime.now())) return;
+    await requestPermissions();
+    await _set(
+      id: exception.id,
+      dateTime: exception.alarmTime,
+      title: exception.title,
+      audioPath: audioPath,
+    );
+  }
+
+  static Future<void> stopShiftException(int id) => Alarm.stop(id);
+
   static Future<void> replacePatternAlarms(WorkPattern pattern) async {
     await requestPermissions();
 
     final wakeIds = (await AlarmStorage.load()).map((alarm) => alarm.id).toSet();
+    final exceptionIds =
+        (await ShiftExceptionStorage.load()).map((item) => item.id).toSet();
     final existing = await Alarm.getAlarms();
     for (final alarm in existing) {
-      if (wakeIds.contains(alarm.id)) continue;
+      if (wakeIds.contains(alarm.id) || exceptionIds.contains(alarm.id)) continue;
       await Alarm.stop(alarm.id);
     }
 
