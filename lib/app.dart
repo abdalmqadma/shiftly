@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
+import 'models/wake_alarm.dart';
 import 'models/work_pattern.dart';
 import 'screens/alarm_challenge_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/setup_screen.dart';
 import 'services/alarm_service.dart';
+import 'services/alarm_storage.dart';
 import 'services/pattern_storage.dart';
 
 class ShiftlyApp extends StatefulWidget {
@@ -18,7 +20,8 @@ class ShiftlyApp extends StatefulWidget {
 class _ShiftlyAppState extends State<ShiftlyApp> {
   final navigatorKey = GlobalKey<NavigatorState>();
   WorkPattern? pattern;
-  bool editing = false;
+  List<WakeAlarm> alarms = const [];
+  bool editingPattern = false;
   bool loaded = false;
   int? activeAlarmId;
   StreamSubscription<dynamic>? ringingSubscription;
@@ -26,7 +29,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   @override
   void initState() {
     super.initState();
-    _loadPattern();
+    _loadState();
     ringingSubscription = Alarm.ringing.listen((alarmSet) {
       for (final alarm in alarmSet.alarms) {
         _openChallenge(alarm.id);
@@ -35,13 +38,16 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     });
   }
 
-  Future<void> _loadPattern() async {
-    final saved = await PatternStorage.load();
+  Future<void> _loadState() async {
+    final values = await Future.wait<dynamic>([
+      PatternStorage.load(),
+      AlarmStorage.load(),
+    ]);
     if (!mounted) return;
     setState(() {
-      pattern = saved;
+      pattern = values[0] as WorkPattern?;
+      alarms = values[1] as List<WakeAlarm>;
       loaded = true;
-      editing = false;
     });
   }
 
@@ -62,10 +68,17 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
           onCompleted: () {
             activeAlarmId = null;
             navigator.pop();
+            unawaited(_rescheduleWakeAlarm(alarmId));
           },
         ),
       ));
     });
+  }
+
+  Future<void> _rescheduleWakeAlarm(int alarmId) async {
+    final matches = alarms.where((alarm) => alarm.id == alarmId && alarm.enabled);
+    if (matches.isEmpty) return;
+    await AlarmService.scheduleWakeAlarm(matches.first);
   }
 
   Future<void> _savePattern(WorkPattern value) async {
@@ -74,8 +87,47 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     if (!mounted) return;
     setState(() {
       pattern = value;
-      editing = false;
+      editingPattern = false;
     });
+  }
+
+  Future<void> _addAlarm(TimeOfDay time, String label) async {
+    final alarm = WakeAlarm(
+      id: 1000000000 +
+          DateTime.now().millisecondsSinceEpoch.remainder(900000000),
+      hour: time.hour,
+      minute: time.minute,
+      label: label,
+      enabled: true,
+    );
+    final updated = [...alarms, alarm];
+    await AlarmStorage.save(updated);
+    await AlarmService.scheduleWakeAlarm(alarm);
+    if (!mounted) return;
+    setState(() => alarms = updated);
+  }
+
+  Future<void> _toggleAlarm(WakeAlarm alarm, bool enabled) async {
+    final updatedAlarm = alarm.copyWith(enabled: enabled);
+    final updated = alarms
+        .map((item) => item.id == alarm.id ? updatedAlarm : item)
+        .toList();
+    await AlarmStorage.save(updated);
+    if (enabled) {
+      await AlarmService.scheduleWakeAlarm(updatedAlarm);
+    } else {
+      await AlarmService.stopWakeAlarm(alarm.id);
+    }
+    if (!mounted) return;
+    setState(() => alarms = updated);
+  }
+
+  Future<void> _deleteAlarm(WakeAlarm alarm) async {
+    await AlarmService.stopWakeAlarm(alarm.id);
+    final updated = alarms.where((item) => item.id != alarm.id).toList();
+    await AlarmStorage.save(updated);
+    if (!mounted) return;
+    setState(() => alarms = updated);
   }
 
   @override
@@ -102,8 +154,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
         cardTheme: CardThemeData(
           elevation: 0,
           color: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         ),
         navigationBarTheme: const NavigationBarThemeData(
           backgroundColor: Colors.white,
@@ -114,19 +165,19 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
       builder: (context, child) =>
           Directionality(textDirection: TextDirection.rtl, child: child!),
       home: !loaded
-          ? const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            )
-          : pattern == null || editing
+          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+          : editingPattern
               ? SetupScreen(
                   onSaved: _savePattern,
-                  onCancel: pattern == null
-                      ? null
-                      : () => setState(() => editing = false),
+                  onCancel: () => setState(() => editingPattern = false),
                 )
               : MainShell(
-              pattern: pattern!,
-                  onEditPattern: () => setState(() => editing = true),
+                  pattern: pattern,
+                  alarms: alarms,
+                  onEditPattern: () => setState(() => editingPattern = true),
+                  onAddAlarm: _addAlarm,
+                  onToggleAlarm: _toggleAlarm,
+                  onDeleteAlarm: _deleteAlarm,
                 ),
     );
   }
