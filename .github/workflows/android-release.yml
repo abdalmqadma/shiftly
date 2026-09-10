@@ -2,8 +2,8 @@ name: Android Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -46,21 +46,26 @@ jobs:
 
       - name: Prepare release files
         run: |
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk shiftly-${GITHUB_REF_NAME}-android-arm64-v8a.apk
-          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk shiftly-${GITHUB_REF_NAME}-android-armeabi-v7a.apk
-          cp build/app/outputs/flutter-apk/app-x86_64-release.apk shiftly-${GITHUB_REF_NAME}-android-x86_64.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk shiftly-build-${GITHUB_RUN_NUMBER}-android-arm64-v8a.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk shiftly-build-${GITHUB_RUN_NUMBER}-android-armeabi-v7a.apk
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk shiftly-build-${GITHUB_RUN_NUMBER}-android-x86_64.apk
 
       - name: Publish split APKs to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: build-${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          name: Shiftly Build #${{ github.run_number }}
           files: |
-            shiftly-${{ github.ref_name }}-android-arm64-v8a.apk
-            shiftly-${{ github.ref_name }}-android-armeabi-v7a.apk
-            shiftly-${{ github.ref_name }}-android-x86_64.apk
+            shiftly-build-${{ github.run_number }}-android-arm64-v8a.apk
+            shiftly-build-${{ github.run_number }}-android-armeabi-v7a.apk
+            shiftly-build-${{ github.run_number }}-android-x86_64.apk
           generate_release_notes: true
           body: |
+            Automated Android release from main.
+
             ## Android downloads
-            - **arm64-v8a**: Most modern Android phones, including 64-bit ARM devices.
+            - **arm64-v8a**: Most modern Android phones and the recommended build for 64-bit ARM devices.
             - **armeabi-v7a**: Older 32-bit ARM Android devices.
             - **x86_64**: Android emulators and x86_64 devices.
 
