@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/shift_exception.dart';
+import '../services/shift_exception_storage.dart';
 
-class ShiftExceptionsScreen extends StatelessWidget {
+class ShiftExceptionsScreen extends StatefulWidget {
   const ShiftExceptionsScreen({
     super.key,
     required this.exceptions,
@@ -20,34 +21,46 @@ class ShiftExceptionsScreen extends StatelessWidget {
   }) onAdd;
   final Future<void> Function(ShiftException exception) onDelete;
 
+  @override
+  State<ShiftExceptionsScreen> createState() => _ShiftExceptionsScreenState();
+}
+
+class _ShiftExceptionsScreenState extends State<ShiftExceptionsScreen> {
   static const violet = Color(0xFF6D4AFF);
+  late List<ShiftException> items;
+
+  @override
+  void initState() {
+    super.initState();
+    items = [...widget.exceptions];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('طوارئ واستثناءات الشفتات')),
-      body: exceptions.isEmpty
-          ? _emptyState(context)
+      body: items.isEmpty
+          ? _emptyState()
           : ListView(
               padding: const EdgeInsets.all(20),
               children: [
                 _introCard(),
                 const SizedBox(height: 16),
-                ...exceptions.map((item) => Padding(
+                ...items.map((item) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: _exceptionCard(context, item),
+                      child: _exceptionCard(item),
                     )),
               ],
             ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddDialog(context),
+        onPressed: _showAddDialog,
         icon: const Icon(Icons.add_alarm_rounded),
         label: const Text('إضافة طارئ'),
       ),
     );
   }
 
-  Widget _emptyState(BuildContext context) => ListView(
+  Widget _emptyState() => ListView(
         padding: const EdgeInsets.all(20),
         children: [
           _introCard(),
@@ -67,7 +80,7 @@ class ShiftExceptionsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           FilledButton.icon(
-            onPressed: () => _showAddDialog(context),
+            onPressed: _showAddDialog,
             icon: const Icon(Icons.add_rounded),
             label: const Text('إضافة استثناء ليوم معيّن'),
           ),
@@ -103,56 +116,54 @@ class ShiftExceptionsScreen extends StatelessWidget {
         ),
       );
 
-  Widget _exceptionCard(BuildContext context, ShiftException item) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const CircleAvatar(
-                  backgroundColor: Color(0xFFEDE8FF),
-                  child: Icon(Icons.work_history_rounded, color: violet),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(item.title,
-                          style: const TextStyle(
-                              fontSize: 17, fontWeight: FontWeight.w900)),
-                      const SizedBox(height: 3),
-                      Text(_dateLabel(item.start),
-                          style: TextStyle(color: Colors.grey.shade600)),
-                    ],
+  Widget _exceptionCard(ShiftException item) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const CircleAvatar(
+                    backgroundColor: Color(0xFFEDE8FF),
+                    child: Icon(Icons.work_history_rounded, color: violet),
                   ),
-                ),
-                IconButton(
-                  tooltip: 'حذف',
-                  onPressed: () => _confirmDelete(context, item),
-                  icon: const Icon(Icons.delete_outline_rounded),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _chip(Icons.schedule_rounded,
-                    '${_timeLabel(item.start)} - ${_timeLabel(item.end)}'),
-                _chip(Icons.notifications_active_outlined,
-                    'تنبيه قبل ${item.alarmBeforeMinutes} دقيقة'),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.title,
+                            style: const TextStyle(
+                                fontSize: 17, fontWeight: FontWeight.w900)),
+                        const SizedBox(height: 3),
+                        Text(_dateLabel(item.start),
+                            style: TextStyle(color: Colors.grey.shade600)),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'حذف',
+                    onPressed: () => _confirmDelete(item),
+                    icon: const Icon(Icons.delete_outline_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _chip(Icons.schedule_rounded,
+                      '${_timeLabel(item.start)} - ${_timeLabel(item.end)}'),
+                  _chip(Icons.notifications_active_outlined,
+                      'تنبيه قبل ${item.alarmBeforeMinutes} دقيقة'),
+                ],
+              ),
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      );
 
   Widget _chip(IconData icon, String text) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -172,24 +183,25 @@ class ShiftExceptionsScreen extends StatelessWidget {
         ),
       );
 
-  Future<void> _showAddDialog(BuildContext context) async {
+  Future<void> _showAddDialog() async {
     final result = await showDialog<_ExceptionDraft>(
       context: context,
       builder: (_) => _AddShiftExceptionDialog(
-        defaultAlarmBeforeMinutes: defaultAlarmBeforeMinutes,
+        defaultAlarmBeforeMinutes: widget.defaultAlarmBeforeMinutes,
       ),
     );
     if (result == null) return;
-    await onAdd(
+    await widget.onAdd(
       title: result.title,
       start: result.start,
       end: result.end,
       alarmBeforeMinutes: result.alarmBeforeMinutes,
     );
+    final refreshed = await ShiftExceptionStorage.load();
+    if (mounted) setState(() => items = refreshed);
   }
 
-  Future<void> _confirmDelete(
-      BuildContext context, ShiftException exception) async {
+  Future<void> _confirmDelete(ShiftException exception) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -205,7 +217,10 @@ class ShiftExceptionsScreen extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed == true) await onDelete(exception);
+    if (confirmed != true) return;
+    await widget.onDelete(exception);
+    final refreshed = await ShiftExceptionStorage.load();
+    if (mounted) setState(() => items = refreshed);
   }
 
   String _dateLabel(DateTime date) =>
