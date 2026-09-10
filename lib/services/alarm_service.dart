@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../models/wake_alarm.dart';
 import '../models/work_pattern.dart';
+import 'alarm_storage.dart';
 
 class AlarmReadiness {
   const AlarmReadiness({
@@ -57,9 +58,10 @@ class AlarmService {
   static Future<void> replacePatternAlarms(WorkPattern pattern) async {
     await requestPermissions();
 
+    final wakeIds = (await AlarmStorage.load()).map((alarm) => alarm.id).toSet();
     final existing = await Alarm.getAlarms();
     for (final alarm in existing) {
-      if (alarm.id >= 1000000000) continue;
+      if (wakeIds.contains(alarm.id)) continue;
       await Alarm.stop(alarm.id);
     }
 
