@@ -2,7 +2,20 @@ import 'dart:io';
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../models/wake_alarm.dart';
 import '../models/work_pattern.dart';
+
+class AlarmReadiness {
+  const AlarmReadiness({
+    required this.notificationsGranted,
+    required this.exactAlarmGranted,
+  });
+
+  final bool notificationsGranted;
+  final bool exactAlarmGranted;
+
+  bool get ready => notificationsGranted && exactAlarmGranted;
+}
 
 class AlarmService {
   const AlarmService._();
@@ -13,11 +26,40 @@ class AlarmService {
     await Permission.scheduleExactAlarm.request();
   }
 
+  static Future<AlarmReadiness> readiness() async {
+    if (!Platform.isAndroid) {
+      return const AlarmReadiness(
+        notificationsGranted: true,
+        exactAlarmGranted: true,
+      );
+    }
+    final notifications = await Permission.notification.status;
+    final exactAlarm = await Permission.scheduleExactAlarm.status;
+    return AlarmReadiness(
+      notificationsGranted: notifications.isGranted,
+      exactAlarmGranted: exactAlarm.isGranted,
+    );
+  }
+
+  static Future<void> scheduleWakeAlarm(WakeAlarm alarm) async {
+    if (!alarm.enabled) return;
+    await requestPermissions();
+    await _set(
+      id: alarm.id,
+      dateTime: alarm.nextOccurrence(),
+      title: alarm.label,
+      audioPath: alarm.ringtonePath,
+    );
+  }
+
+  static Future<void> stopWakeAlarm(int id) => Alarm.stop(id);
+
   static Future<void> replacePatternAlarms(WorkPattern pattern) async {
     await requestPermissions();
 
     final existing = await Alarm.getAlarms();
     for (final alarm in existing) {
+      if (alarm.id >= 1000000000) continue;
       await Alarm.stop(alarm.id);
     }
 
@@ -38,7 +80,7 @@ class AlarmService {
 
         if (alarmTime.isAfter(now)) {
           await _set(
-            id: _idFor(alarmTime),
+            id: _patternIdFor(alarmTime),
             dateTime: alarmTime,
             title: shift.name,
             audioPath: pattern.ringtonePath,
@@ -55,7 +97,7 @@ class AlarmService {
     await requestPermissions();
     final time = DateTime.now().add(const Duration(minutes: 1));
     await _set(
-      id: _idFor(time),
+      id: 1900000000 + DateTime.now().second,
       dateTime: time,
       title: 'منبّه تجريبي',
       audioPath: audioPath,
@@ -94,6 +136,6 @@ class AlarmService {
     );
   }
 
-  static int _idFor(DateTime time) =>
-      time.millisecondsSinceEpoch.remainder(2147483647);
+  static int _patternIdFor(DateTime time) =>
+      time.millisecondsSinceEpoch.remainder(900000000) + 10000000;
 }
