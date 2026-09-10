@@ -16,8 +16,10 @@ class MainShell extends StatefulWidget {
     required this.shiftExceptions,
     required this.onEditPattern,
     required this.onAddAlarm,
+    required this.onUpdateAlarm,
     required this.onToggleAlarm,
     required this.onDeleteAlarm,
+    required this.onEditTodayShiftAlarm,
     required this.onAddShiftException,
     required this.onDeleteShiftException,
   });
@@ -26,9 +28,16 @@ class MainShell extends StatefulWidget {
   final List<WakeAlarm> alarms;
   final List<ShiftException> shiftExceptions;
   final VoidCallback onEditPattern;
-  final Future<void> Function(TimeOfDay time, String label) onAddAlarm;
+  final Future<void> Function(WakeAlarm alarm) onAddAlarm;
+  final Future<void> Function(WakeAlarm alarm) onUpdateAlarm;
   final Future<void> Function(WakeAlarm alarm, bool enabled) onToggleAlarm;
   final Future<void> Function(WakeAlarm alarm) onDeleteAlarm;
+  final Future<void> Function({
+    required int alarmId,
+    required String title,
+    required DateTime oldTime,
+    required DateTime newTime,
+  }) onEditTodayShiftAlarm;
   final Future<void> Function({
     required String title,
     required DateTime start,
@@ -50,9 +59,12 @@ class _MainShellState extends State<MainShell> {
     final pages = [
       WakeAlarmsScreen(
         alarms: widget.alarms,
+        pattern: widget.pattern,
         onAdd: widget.onAddAlarm,
+        onUpdate: widget.onUpdateAlarm,
         onToggle: widget.onToggleAlarm,
         onDelete: widget.onDeleteAlarm,
+        onEditTodayShiftAlarm: widget.onEditTodayShiftAlarm,
       ),
       _shiftMode(),
       _settings(),
@@ -66,9 +78,10 @@ class _MainShellState extends State<MainShell> {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-                color: violet, borderRadius: BorderRadius.circular(11)),
-            child: const Icon(Icons.alarm_rounded,
-                color: Colors.white, size: 21),
+              color: violet,
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: const Icon(Icons.alarm_rounded, color: Colors.white, size: 21),
           ),
           const SizedBox(width: 10),
           const Column(
@@ -91,7 +104,8 @@ class _MainShellState extends State<MainShell> {
               icon: Icon(Icons.alarm_outlined), label: 'المنبّهات'),
           NavigationDestination(
               icon: Icon(Icons.autorenew_rounded), label: 'الشفتات'),
-          NavigationDestination(icon: Icon(Icons.tune_rounded), label: 'الإعدادات'),
+          NavigationDestination(
+              icon: Icon(Icons.tune_rounded), label: 'الإعدادات'),
         ],
       ),
     );
