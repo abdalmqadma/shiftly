@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
+import 'models/shift_exception.dart';
 import 'models/wake_alarm.dart';
 import 'models/work_pattern.dart';
 import 'screens/alarm_challenge_screen.dart';
@@ -9,6 +10,7 @@ import 'screens/setup_screen.dart';
 import 'services/alarm_service.dart';
 import 'services/alarm_storage.dart';
 import 'services/pattern_storage.dart';
+import 'services/shift_exception_storage.dart';
 
 class ShiftlyApp extends StatefulWidget {
   const ShiftlyApp({super.key});
@@ -21,6 +23,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   final navigatorKey = GlobalKey<NavigatorState>();
   WorkPattern? pattern;
   List<WakeAlarm> alarms = const [];
+  List<ShiftException> shiftExceptions = const [];
   bool editingPattern = false;
   bool loaded = false;
   int? activeAlarmId;
@@ -42,11 +45,13 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     final values = await Future.wait<dynamic>([
       PatternStorage.load(),
       AlarmStorage.load(),
+      ShiftExceptionStorage.load(),
     ]);
     if (!mounted) return;
     setState(() {
       pattern = values[0] as WorkPattern?;
       alarms = values[1] as List<WakeAlarm>;
+      shiftExceptions = values[2] as List<ShiftException>;
       loaded = true;
     });
   }
@@ -130,6 +135,40 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     setState(() => alarms = updated);
   }
 
+  Future<void> _addShiftException({
+    required String title,
+    required DateTime start,
+    required DateTime end,
+    required int alarmBeforeMinutes,
+  }) async {
+    final exception = ShiftException(
+      id: 1950000000 +
+          DateTime.now().millisecondsSinceEpoch.remainder(100000000),
+      title: title,
+      start: start,
+      end: end,
+      alarmBeforeMinutes: alarmBeforeMinutes,
+    );
+    final updated = [...shiftExceptions, exception]
+      ..sort((a, b) => a.start.compareTo(b.start));
+    await ShiftExceptionStorage.save(updated);
+    await AlarmService.scheduleShiftException(
+      exception,
+      audioPath: pattern?.ringtonePath,
+    );
+    if (!mounted) return;
+    setState(() => shiftExceptions = updated);
+  }
+
+  Future<void> _deleteShiftException(ShiftException exception) async {
+    await AlarmService.stopShiftException(exception.id);
+    final updated =
+        shiftExceptions.where((item) => item.id != exception.id).toList();
+    await ShiftExceptionStorage.save(updated);
+    if (!mounted) return;
+    setState(() => shiftExceptions = updated);
+  }
+
   @override
   void dispose() {
     ringingSubscription?.cancel();
@@ -174,10 +213,13 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
               : MainShell(
                   pattern: pattern,
                   alarms: alarms,
+                  shiftExceptions: shiftExceptions,
                   onEditPattern: () => setState(() => editingPattern = true),
                   onAddAlarm: _addAlarm,
                   onToggleAlarm: _toggleAlarm,
                   onDeleteAlarm: _deleteAlarm,
+                  onAddShiftException: _addShiftException,
+                  onDeleteShiftException: _deleteShiftException,
                 ),
     );
   }
