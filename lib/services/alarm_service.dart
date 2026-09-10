@@ -57,6 +57,24 @@ class AlarmService {
 
   static Future<void> stopWakeAlarm(int id) => Alarm.stop(id);
 
+  static Future<void> rescheduleOneTimeShiftAlarm({
+    required int id,
+    required String title,
+    required DateTime oldTime,
+    required DateTime newTime,
+    String? audioPath,
+  }) async {
+    await requestPermissions();
+    await Alarm.stop(id);
+    if (!newTime.isAfter(DateTime.now())) return;
+    await _set(
+      id: id,
+      dateTime: newTime,
+      title: title,
+      audioPath: audioPath,
+    );
+  }
+
   static Future<void> scheduleShiftException(
     ShiftException exception, {
     String? audioPath,
@@ -104,7 +122,7 @@ class AlarmService {
 
         if (alarmTime.isAfter(now)) {
           await _set(
-            id: _patternIdFor(alarmTime),
+            id: patternAlarmIdFor(alarmTime),
             dateTime: alarmTime,
             title: shift.name,
             audioPath: pattern.ringtonePath,
@@ -160,6 +178,6 @@ class AlarmService {
     );
   }
 
-  static int _patternIdFor(DateTime time) =>
+  static int patternAlarmIdFor(DateTime time) =>
       time.millisecondsSinceEpoch.remainder(900000000) + 10000000;
 }
