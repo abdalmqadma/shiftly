@@ -81,7 +81,9 @@ class AlarmService {
         (await ShiftExceptionStorage.load()).map((item) => item.id).toSet();
     final existing = await Alarm.getAlarms();
     for (final alarm in existing) {
-      if (wakeIds.contains(alarm.id) || exceptionIds.contains(alarm.id)) continue;
+      if (wakeIds.contains(alarm.id) || exceptionIds.contains(alarm.id)) {
+        continue;
+      }
       await Alarm.stop(alarm.id);
     }
 
