@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../models/shift_exception.dart';
 import '../models/wake_alarm.dart';
 import '../models/work_pattern.dart';
 import '../services/alarm_service.dart';
 import 'calendar_screen.dart';
 import 'home_screen.dart';
+import 'shift_exceptions_screen.dart';
 import 'wake_alarms_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -11,18 +13,29 @@ class MainShell extends StatefulWidget {
     super.key,
     required this.pattern,
     required this.alarms,
+    required this.shiftExceptions,
     required this.onEditPattern,
     required this.onAddAlarm,
     required this.onToggleAlarm,
     required this.onDeleteAlarm,
+    required this.onAddShiftException,
+    required this.onDeleteShiftException,
   });
 
   final WorkPattern? pattern;
   final List<WakeAlarm> alarms;
+  final List<ShiftException> shiftExceptions;
   final VoidCallback onEditPattern;
   final Future<void> Function(TimeOfDay time, String label) onAddAlarm;
   final Future<void> Function(WakeAlarm alarm, bool enabled) onToggleAlarm;
   final Future<void> Function(WakeAlarm alarm) onDeleteAlarm;
+  final Future<void> Function({
+    required String title,
+    required DateTime start,
+    required DateTime end,
+    required int alarmBeforeMinutes,
+  }) onAddShiftException;
+  final Future<void> Function(ShiftException exception) onDeleteShiftException;
 
   @override
   State<MainShell> createState() => _MainShellState();
@@ -127,6 +140,26 @@ class _MainShellState extends State<MainShell> {
     return Column(children: [
       Expanded(child: HomeScreen(pattern: pattern)),
       Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+        child: Card(
+          child: ListTile(
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            leading: const CircleAvatar(
+              backgroundColor: Color(0xFFFFECE8),
+              child: Icon(Icons.emergency_outlined, color: Color(0xFFD84B35)),
+            ),
+            title: const Text('طوارئ واستثناءات الشفتات',
+                style: TextStyle(fontWeight: FontWeight.w900)),
+            subtitle: Text(widget.shiftExceptions.isEmpty
+                ? 'تغطية مكان شخص أو شفت إضافي ليوم محدد'
+                : '${widget.shiftExceptions.length} استثناءات محفوظة'),
+            trailing: const Icon(Icons.chevron_left_rounded),
+            onTap: () => _openShiftExceptions(pattern),
+          ),
+        ),
+      ),
+      Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         child: Row(children: [
           Expanded(
@@ -154,6 +187,21 @@ class _MainShellState extends State<MainShell> {
         ]),
       ),
     ]);
+  }
+
+  Future<void> _openShiftExceptions(WorkPattern pattern) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => ShiftExceptionsScreen(
+          exceptions: widget.shiftExceptions,
+          defaultAlarmBeforeMinutes: pattern.alarmBeforeMinutes,
+          onAdd: widget.onAddShiftException,
+          onDelete: widget.onDeleteShiftException,
+        ),
+      ),
+    );
+    if (mounted) setState(() {});
   }
 
   Widget _settings() => ListView(
