@@ -59,7 +59,6 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   void _openChallenge(int alarmId) {
     if (activeAlarmId == alarmId) return;
     activeAlarmId = alarmId;
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final navigator = navigatorKey.currentState;
       if (navigator == null) {
@@ -96,14 +95,19 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     });
   }
 
-  Future<void> _addAlarm(TimeOfDay time, String label) async {
+  Future<void> _addAlarm(WakeAlarm draft) async {
     final alarm = WakeAlarm(
       id: 1000000000 +
           DateTime.now().millisecondsSinceEpoch.remainder(900000000),
-      hour: time.hour,
-      minute: time.minute,
-      label: label,
+      hour: draft.hour,
+      minute: draft.minute,
+      label: draft.label,
       enabled: true,
+      weekdays: draft.weekdays,
+      challengeEnabled: draft.challengeEnabled,
+      sleepyMeProtection: draft.sleepyMeProtection,
+      proofOfAwake: draft.proofOfAwake,
+      ringtonePath: draft.ringtonePath,
     );
     final updated = [...alarms, alarm];
     await AlarmStorage.save(updated);
@@ -112,20 +116,17 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     setState(() => alarms = updated);
   }
 
-  Future<void> _toggleAlarm(WakeAlarm alarm, bool enabled) async {
-    final updatedAlarm = alarm.copyWith(enabled: enabled);
-    final updated = alarms
-        .map((item) => item.id == alarm.id ? updatedAlarm : item)
-        .toList();
+  Future<void> _updateAlarm(WakeAlarm alarm) async {
+    final updated = alarms.map((item) => item.id == alarm.id ? alarm : item).toList();
     await AlarmStorage.save(updated);
-    if (enabled) {
-      await AlarmService.scheduleWakeAlarm(updatedAlarm);
-    } else {
-      await AlarmService.stopWakeAlarm(alarm.id);
-    }
+    await AlarmService.stopWakeAlarm(alarm.id);
+    if (alarm.enabled) await AlarmService.scheduleWakeAlarm(alarm);
     if (!mounted) return;
     setState(() => alarms = updated);
   }
+
+  Future<void> _toggleAlarm(WakeAlarm alarm, bool enabled) =>
+      _updateAlarm(alarm.copyWith(enabled: enabled));
 
   Future<void> _deleteAlarm(WakeAlarm alarm) async {
     await AlarmService.stopWakeAlarm(alarm.id);
@@ -133,6 +134,21 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     await AlarmStorage.save(updated);
     if (!mounted) return;
     setState(() => alarms = updated);
+  }
+
+  Future<void> _editTodayShiftAlarm({
+    required int alarmId,
+    required String title,
+    required DateTime oldTime,
+    required DateTime newTime,
+  }) async {
+    await AlarmService.rescheduleOneTimeShiftAlarm(
+      id: alarmId,
+      title: title,
+      oldTime: oldTime,
+      newTime: newTime,
+      audioPath: pattern?.ringtonePath,
+    );
   }
 
   Future<void> _addShiftException({
@@ -152,18 +168,14 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     final updated = [...shiftExceptions, exception]
       ..sort((a, b) => a.start.compareTo(b.start));
     await ShiftExceptionStorage.save(updated);
-    await AlarmService.scheduleShiftException(
-      exception,
-      audioPath: pattern?.ringtonePath,
-    );
+    await AlarmService.scheduleShiftException(exception, audioPath: pattern?.ringtonePath);
     if (!mounted) return;
     setState(() => shiftExceptions = updated);
   }
 
   Future<void> _deleteShiftException(ShiftException exception) async {
     await AlarmService.stopShiftException(exception.id);
-    final updated =
-        shiftExceptions.where((item) => item.id != exception.id).toList();
+    final updated = shiftExceptions.where((item) => item.id != exception.id).toList();
     await ShiftExceptionStorage.save(updated);
     if (!mounted) return;
     setState(() => shiftExceptions = updated);
@@ -201,8 +213,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
           height: 72,
         ),
       ),
-      builder: (context, child) =>
-          Directionality(textDirection: TextDirection.rtl, child: child!),
+      builder: (context, child) => Directionality(textDirection: TextDirection.rtl, child: child!),
       home: !loaded
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : editingPattern
@@ -216,8 +227,10 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
                   shiftExceptions: shiftExceptions,
                   onEditPattern: () => setState(() => editingPattern = true),
                   onAddAlarm: _addAlarm,
+                  onUpdateAlarm: _updateAlarm,
                   onToggleAlarm: _toggleAlarm,
                   onDeleteAlarm: _deleteAlarm,
+                  onEditTodayShiftAlarm: _editTodayShiftAlarm,
                   onAddShiftException: _addShiftException,
                   onDeleteShiftException: _deleteShiftException,
                 ),
