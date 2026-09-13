@@ -146,7 +146,7 @@ class WakeAlarmsScreen extends StatelessWidget {
           IconButton(
             tooltip: 'تعديل تنبيه اليوم',
             onPressed: () => _editShiftAlarm(context, item),
-            icon: const Icon(Icons.edit_alarm_rounded, color: violet),
+            icon: const Icon(Icons.edit_rounded, color: violet),
           ),
         ]),
       );
@@ -327,7 +327,15 @@ class WakeAlarmsScreen extends StatelessWidget {
 
   String _daysLabel(List<int> days) {
     if (days.length == 7) return 'كل يوم';
-    const names = {1: 'الإثنين', 2: 'الثلاثاء', 3: 'الأربعاء', 4: 'الخميس', 5: 'الجمعة', 6: 'السبت', 7: 'الأحد'};
+    const names = {
+      1: 'الإثنين',
+      2: 'الثلاثاء',
+      3: 'الأربعاء',
+      4: 'الخميس',
+      5: 'الجمعة',
+      6: 'السبت',
+      7: 'الأحد'
+    };
     return days.map((day) => names[day]).whereType<String>().join('، ');
   }
 }
@@ -393,10 +401,14 @@ class _AlarmEditorState extends State<_AlarmEditor> {
           children: [
             Row(children: [
               Expanded(
-                child: Text(widget.alarm == null ? 'منبّه جديد' : 'تعديل المنبّه',
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+                child: Text(
+                    widget.alarm == null ? 'منبّه جديد' : 'تعديل المنبّه',
+                    style: const TextStyle(
+                        fontSize: 24, fontWeight: FontWeight.w900)),
               ),
-              IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close)),
+              IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close)),
             ]),
             const SizedBox(height: 12),
             InkWell(
@@ -412,7 +424,10 @@ class _AlarmEditorState extends State<_AlarmEditor> {
                   const Text('وقت المنبّه'),
                   const SizedBox(height: 6),
                   Text(time.format(context),
-                      style: const TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: violet)),
+                      style: const TextStyle(
+                          fontSize: 38,
+                          fontWeight: FontWeight.w900,
+                          color: violet)),
                 ]),
               ),
             ),
@@ -425,14 +440,20 @@ class _AlarmEditorState extends State<_AlarmEditor> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text('أيام التكرار', style: TextStyle(fontWeight: FontWeight.w900)),
+            const Text('أيام التكرار',
+                style: TextStyle(fontWeight: FontWeight.w900)),
             const SizedBox(height: 10),
             Wrap(
               spacing: 7,
               runSpacing: 7,
               children: const [
-                (7, 'أحد'), (1, 'إثن'), (2, 'ثلا'), (3, 'أرب'),
-                (4, 'خمي'), (5, 'جمع'), (6, 'سبت'),
+                (7, 'أحد'),
+                (1, 'إثن'),
+                (2, 'ثلا'),
+                (3, 'أرب'),
+                (4, 'خمي'),
+                (5, 'جمع'),
+                (6, 'سبت'),
               ].map((entry) {
                 final selected = days.contains(entry.$1);
                 return FilterChip(
@@ -449,7 +470,8 @@ class _AlarmEditorState extends State<_AlarmEditor> {
               }).toList(),
             ),
             const SizedBox(height: 20),
-            const Text('تخصيصات Shiftly', style: TextStyle(fontWeight: FontWeight.w900)),
+            const Text('تخصيصات Shiftly',
+                style: TextStyle(fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
@@ -476,7 +498,8 @@ class _AlarmEditorState extends State<_AlarmEditor> {
             FilledButton.icon(
               onPressed: _save,
               icon: const Icon(Icons.alarm_on_rounded),
-              label: Text(widget.alarm == null ? 'إضافة المنبّه' : 'حفظ التعديلات'),
+              label: Text(
+                  widget.alarm == null ? 'إضافة المنبّه' : 'حفظ التعديلات'),
             ),
           ],
         ),
