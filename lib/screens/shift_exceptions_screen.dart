@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors.dart';
 import '../models/shift_exception.dart';
 import '../services/shift_exception_storage.dart';
 
@@ -26,7 +27,6 @@ class ShiftExceptionsScreen extends StatefulWidget {
 }
 
 class _ShiftExceptionsScreenState extends State<ShiftExceptionsScreen> {
-  static const violet = Color(0xFF6D4AFF);
   late List<ShiftException> items;
 
   @override
@@ -60,125 +60,137 @@ class _ShiftExceptionsScreenState extends State<ShiftExceptionsScreen> {
     );
   }
 
-  Widget _emptyState() => ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _introCard(),
-          const SizedBox(height: 36),
-          const Icon(Icons.event_available_outlined, size: 72, color: violet),
-          const SizedBox(height: 16),
-          const Text(
-            'ما عندك استثناءات حالياً',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'إذا غبت، غطّيت مكان شخص، أو عندك شفت إضافي بيوم معيّن، أضفه هون بدون تغيير دورة المناوبة الأساسية.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey.shade600, height: 1.5),
-          ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: _showAddDialog,
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('إضافة استثناء ليوم معيّن'),
-          ),
-        ],
-      );
+  Widget _emptyState() {
+    final scheme = Theme.of(context).colorScheme;
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        _introCard(),
+        const SizedBox(height: 36),
+        const Icon(Icons.event_available_outlined,
+            size: 72, color: AppColors.primary),
+        const SizedBox(height: 16),
+        const Text(
+          'ما عندك استثناءات حالياً',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'إذا غبت، غطّيت مكان شخص، أو عندك شفت إضافي بيوم معيّن، أضفه هون بدون تغيير دورة المناوبة الأساسية.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: scheme.onSurfaceVariant, height: 1.5),
+        ),
+        const SizedBox(height: 24),
+        FilledButton.icon(
+          onPressed: _showAddDialog,
+          icon: const Icon(Icons.add_rounded),
+          label: const Text('إضافة استثناء ليوم معيّن'),
+        ),
+      ],
+    );
+  }
 
-  Widget _introCard() => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.emergency_outlined, color: violet),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'استثناء بدون تخريب الجدول',
-                      style: TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'الاستثناء مستقل عن دورة الشفتات، وله تنبيه خاص فيه.',
-                      style: TextStyle(color: Colors.grey.shade600),
-                    ),
-                  ],
+  Widget _introCard() {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.emergency_outlined, color: AppColors.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'استثناء بدون تخريب الجدول',
+                    style: TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'الاستثناء مستقل عن دورة الشفتات، وله تنبيه خاص فيه.',
+                    style: TextStyle(color: scheme.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _exceptionCard(ShiftException item) {
+    final scheme = Theme.of(context).colorScheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: AppColors.primary.withValues(alpha: .12),
+                  child: const Icon(Icons.work_history_rounded,
+                      color: AppColors.primary),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.title,
+                          style: const TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 3),
+                      Text(_dateLabel(item.start),
+                          style: TextStyle(color: scheme.onSurfaceVariant)),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'حذف',
+                  onPressed: () => _confirmDelete(item),
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      color: AppColors.danger),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _chip(Icons.schedule_rounded,
+                    '${_timeLabel(item.start)} - ${_timeLabel(item.end)}'),
+                _chip(Icons.notifications_active_outlined,
+                    'تنبيه قبل ${item.alarmBeforeMinutes} دقيقة'),
+              ],
+            ),
+          ],
         ),
-      );
-
-  Widget _exceptionCard(ShiftException item) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const CircleAvatar(
-                    backgroundColor: Color(0xFFEDE8FF),
-                    child: Icon(Icons.work_history_rounded, color: violet),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(item.title,
-                            style: const TextStyle(
-                                fontSize: 17, fontWeight: FontWeight.w900)),
-                        const SizedBox(height: 3),
-                        Text(_dateLabel(item.start),
-                            style: TextStyle(color: Colors.grey.shade600)),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'حذف',
-                    onPressed: () => _confirmDelete(item),
-                    icon: const Icon(Icons.delete_outline_rounded),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _chip(Icons.schedule_rounded,
-                      '${_timeLabel(item.start)} - ${_timeLabel(item.end)}'),
-                  _chip(Icons.notifications_active_outlined,
-                      'تنبيه قبل ${item.alarmBeforeMinutes} دقيقة'),
-                ],
-              ),
-            ],
-          ),
-        ),
-      );
+      ),
+    );
+  }
 
   Widget _chip(IconData icon, String text) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F2FF),
+          color: AppColors.primary.withValues(alpha: .09),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: violet),
+            Icon(icon, size: 16, color: AppColors.primary),
             const SizedBox(width: 6),
             Text(text,
-                style:
-                    const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+                style: const TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w700)),
           ],
         ),
       );
@@ -212,6 +224,7 @@ class _ShiftExceptionsScreenState extends State<ShiftExceptionsScreen> {
               onPressed: () => Navigator.pop(context, false),
               child: const Text('إلغاء')),
           FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
               onPressed: () => Navigator.pop(context, true),
               child: const Text('حذف')),
         ],
@@ -335,27 +348,30 @@ class _AddShiftExceptionDialogState extends State<_AddShiftExceptionDialog> {
     );
   }
 
-  Widget _timeTile(String label, TimeOfDay value, bool start) => InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => _pickTime(start),
-        child: Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-              const SizedBox(height: 4),
-              Text(value.format(context),
-                  style: const TextStyle(fontWeight: FontWeight.w900)),
-            ],
-          ),
+  Widget _timeTile(String label, TimeOfDay value, bool start) {
+    final scheme = Theme.of(context).colorScheme;
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => _pickTime(start),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: scheme.outlineVariant),
+          borderRadius: BorderRadius.circular(14),
         ),
-      );
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 4),
+            Text(value.format(context),
+                style: const TextStyle(fontWeight: FontWeight.w900)),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _pickDate() async {
     final selected = await showDatePicker(
