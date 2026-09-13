@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors.dart';
 import '../models/work_pattern.dart';
 import '../services/ringtone_service.dart';
 
@@ -26,7 +27,6 @@ class _ShiftDraft {
 }
 
 class _SetupScreenState extends State<SetupScreen> {
-  static const violet = Color(0xFF6D4AFF);
   final _formKey = GlobalKey<FormState>();
   final _dutyController = TextEditingController();
   final _offController = TextEditingController();
@@ -46,11 +46,6 @@ class _SetupScreenState extends State<SetupScreen> {
     _countController.dispose();
     _alarmController.dispose();
     super.dispose();
-  }
-
-  int? _positive(String? value) {
-    final number = int.tryParse(value ?? '');
-    return number != null && number > 0 ? number : null;
   }
 
   void _continue() {
@@ -154,22 +149,28 @@ class _SetupScreenState extends State<SetupScreen> {
         if (!didPop) widget.onCancel?.call();
       },
       child: Scaffold(
-      appBar: AppBar(
-        title: const Text('إعداد جدولك',
-            style: TextStyle(fontWeight: FontWeight.w900)),
-        leading: _step == 1
-            ? IconButton(
-                onPressed: () => setState(() => _step = 0),
-                icon: const Icon(Icons.arrow_forward_rounded))
-            : widget.onCancel == null
-                ? null
-                : IconButton(
-                    tooltip: 'إلغاء التعديل',
-                    onPressed: widget.onCancel,
-                    icon: const Icon(Icons.close_rounded)),
+        appBar: AppBar(
+          title: const Text('إعداد جدولك',
+              style: TextStyle(fontWeight: FontWeight.w900)),
+          leading: _step == 1
+              ? Directionality(
+                  textDirection: TextDirection.ltr,
+                  child: IconButton(
+                    tooltip: 'رجوع',
+                    onPressed: () => setState(() => _step = 0),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                  ),
+                )
+              : widget.onCancel == null
+                  ? null
+                  : IconButton(
+                      tooltip: 'إلغاء التعديل',
+                      onPressed: widget.onCancel,
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+        ),
+        body: SafeArea(child: _step == 0 ? _basicStep() : _shiftsStep()),
       ),
-      body: SafeArea(child: _step == 0 ? _basicStep() : _shiftsStep()),
-    ),
     );
   }
 
@@ -183,8 +184,11 @@ class _SetupScreenState extends State<SetupScreen> {
             const Text('كيف يعمل دوامك؟',
                 style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900)),
             const SizedBox(height: 8),
-            Text('لن نفترض أي مواعيد. أدخل نظامك كما هو.',
-                style: TextStyle(color: Colors.grey.shade600)),
+            Text(
+              'لن نفترض أي مواعيد. أدخل نظامك كما هو.',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
             const SizedBox(height: 24),
             Row(children: [
               Expanded(
@@ -202,11 +206,13 @@ class _SetupScreenState extends State<SetupScreen> {
                 'مثال: 4', Icons.format_list_numbered_rounded),
             const SizedBox(height: 14),
             _numberField(_alarmController, 'التنبيه قبل الشِفت',
-                'بالدقائق', Icons.alarm_rounded, allowZero: true),
+                'بالدقائق', Icons.alarm_rounded,
+                allowZero: true),
             const SizedBox(height: 14),
             Card(
               child: ListTile(
-                leading: const Icon(Icons.music_note_rounded, color: violet),
+                leading: const Icon(Icons.music_note_rounded,
+                    color: AppColors.primary),
                 title: const Text('نغمة المنبّه'),
                 subtitle: Text(_ringtone.name,
                     maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -218,7 +224,8 @@ class _SetupScreenState extends State<SetupScreen> {
             Card(
               child: Column(children: [
                 ListTile(
-                  leading: const Icon(Icons.event_outlined, color: violet),
+                  leading: const Icon(Icons.event_outlined,
+                      color: AppColors.primary),
                   title: const Text('تاريخ بداية الدورة'),
                   subtitle: Text(_date(_startDate)),
                   onTap: () async {
@@ -233,7 +240,8 @@ class _SetupScreenState extends State<SetupScreen> {
                 ),
                 const Divider(height: 1, indent: 18, endIndent: 18),
                 ListTile(
-                  leading: const Icon(Icons.schedule_rounded, color: violet),
+                  leading: const Icon(Icons.schedule_rounded,
+                      color: AppColors.primary),
                   title: const Text('وقت بداية الدورة'),
                   subtitle: Text(_startTime.format(context)),
                   onTap: () async {
@@ -247,7 +255,7 @@ class _SetupScreenState extends State<SetupScreen> {
             const SizedBox(height: 24),
             FilledButton(
               style: FilledButton.styleFrom(
-                  backgroundColor: violet,
+                  backgroundColor: AppColors.primary,
                   minimumSize: const Size.fromHeight(56)),
               onPressed: _continue,
               child: const Text('التالي: مواعيد الشِفتات'),
@@ -264,14 +272,17 @@ class _SetupScreenState extends State<SetupScreen> {
           const Text('من كم إلى كم؟',
               style: TextStyle(fontSize: 27, fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
-          Text('حدد يوم ووقت بداية ونهاية كل شِفت داخل الدورة.',
-              style: TextStyle(color: Colors.grey.shade600)),
+          Text(
+            'حدد يوم ووقت بداية ونهاية كل شِفت داخل الدورة.',
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
           const SizedBox(height: 20),
           ..._drafts.map(_shiftCard),
           const SizedBox(height: 10),
           FilledButton(
             style: FilledButton.styleFrom(
-                backgroundColor: violet,
+                backgroundColor: AppColors.primary,
                 minimumSize: const Size.fromHeight(56)),
             onPressed: _save,
             child: const Text('حفظ وإنشاء التقويم'),
@@ -283,49 +294,56 @@ class _SetupScreenState extends State<SetupScreen> {
         margin: const EdgeInsets.only(bottom: 14),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text('الشِفت ${draft.index + 1}',
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 14),
-            Row(children: [
-              Expanded(child: _dayPicker(draft, true)),
-              const SizedBox(width: 10),
-              Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('الشِفت ${draft.index + 1}',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 14),
+              Row(children: [
+                Expanded(child: _dayPicker(draft, true)),
+                const SizedBox(width: 10),
+                Expanded(
                   child: OutlinedButton(
-                      onPressed: () => _pickTime(draft, true),
-                      child: Text('من ${draft.start.format(context)}'))),
-            ]),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(child: _dayPicker(draft, false)),
-              const SizedBox(width: 10),
-              Expanded(
+                    onPressed: () => _pickTime(draft, true),
+                    child: Text('من ${draft.start.format(context)}'),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(child: _dayPicker(draft, false)),
+                const SizedBox(width: 10),
+                Expanded(
                   child: OutlinedButton(
-                      onPressed: () => _pickTime(draft, false),
-                      child: Text('إلى ${draft.end.format(context)}'))),
-            ]),
-          ]),
+                    onPressed: () => _pickTime(draft, false),
+                    child: Text('إلى ${draft.end.format(context)}'),
+                  ),
+                ),
+              ]),
+            ],
+          ),
         ),
       );
 
   Widget _dayPicker(_ShiftDraft draft, bool start) {
     final dutyMinutes = int.parse(_dutyController.text) * 60;
     final startMinute = _startTime.hour * 60 + _startTime.minute;
-    final dutyDays = ((startMinute + dutyMinutes + 1439) ~/ 1440)
-        .clamp(1, 30);
+    final dutyDays = ((startMinute + dutyMinutes + 1439) ~/ 1440).clamp(1, 30);
     final value = start ? draft.startDay : draft.endDay;
     return DropdownButtonFormField<int>(
       initialValue: value,
       decoration: InputDecoration(
         labelText: start ? 'يبدأ في اليوم' : 'ينتهي في اليوم',
-        border: const OutlineInputBorder(),
       ),
       items: List.generate(
-          dutyDays,
-          (index) => DropdownMenuItem(
-              value: index + 1, child: Text('اليوم ${index + 1}'))),
+        dutyDays,
+        (index) => DropdownMenuItem(
+          value: index + 1,
+          child: Text('اليوم ${index + 1}'),
+        ),
+      ),
       onChanged: (selected) {
         if (selected == null) return;
         setState(() =>
@@ -334,9 +352,13 @@ class _SetupScreenState extends State<SetupScreen> {
     );
   }
 
-  Widget _numberField(TextEditingController controller, String label,
-          String hint, IconData icon,
-          {bool allowZero = false}) =>
+  Widget _numberField(
+    TextEditingController controller,
+    String label,
+    String hint,
+    IconData icon, {
+    bool allowZero = false,
+  }) =>
       TextFormField(
         controller: controller,
         keyboardType: TextInputType.number,
@@ -344,9 +366,6 @@ class _SetupScreenState extends State<SetupScreen> {
           labelText: label,
           hintText: hint,
           prefixIcon: Icon(icon),
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(18)),
         ),
         validator: (value) {
           final number = int.tryParse(value ?? '');
@@ -417,17 +436,19 @@ class _SetupScreenState extends State<SetupScreen> {
         Container(
           width: 36,
           height: 36,
-          decoration:
-              const BoxDecoration(color: violet, shape: BoxShape.circle),
+          decoration: const BoxDecoration(
+              color: AppColors.primary, shape: BoxShape.circle),
           child: Center(
-              child: Text('$number/2',
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w800))),
+            child: Text(
+              '$number/2',
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.w800),
+            ),
+          ),
         ),
         const SizedBox(width: 10),
         Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
       ]);
 
-  String _date(DateTime date) =>
-      '${date.day}/${date.month}/${date.year}';
+  String _date(DateTime date) => '${date.day}/${date.month}/${date.year}';
 }
