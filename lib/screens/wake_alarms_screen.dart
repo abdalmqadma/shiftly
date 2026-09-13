@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors.dart';
 import '../models/wake_alarm.dart';
 import '../models/work_pattern.dart';
 import '../services/alarm_service.dart';
@@ -29,11 +30,10 @@ class WakeAlarmsScreen extends StatelessWidget {
     required DateTime newTime,
   }) onEditTodayShiftAlarm;
 
-  static const violet = Color(0xFF6D4AFF);
-
   @override
   Widget build(BuildContext context) {
     final shifts = _todayShiftAlarms();
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: SafeArea(
         child: ListView(
@@ -42,8 +42,10 @@ class WakeAlarmsScreen extends StatelessWidget {
             const Text('منبّهاتك',
                 style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
             const SizedBox(height: 6),
-            Text('منبّهاتك اليدوية + تنبيهات شفتات اليوم في مكان واحد.',
-                style: TextStyle(color: Colors.grey.shade600)),
+            Text(
+              'منبّهاتك اليدوية + تنبيهات شفتات اليوم في مكان واحد.',
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
             if (shifts.isNotEmpty) ...[
               const SizedBox(height: 22),
               _sectionTitle('شفتات اليوم', Icons.work_history_rounded),
@@ -62,7 +64,7 @@ class WakeAlarmsScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openEditor(context),
-        backgroundColor: violet,
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_alarm_rounded),
         label: const Text('منبّه جديد',
@@ -72,7 +74,7 @@ class WakeAlarmsScreen extends StatelessWidget {
   }
 
   Widget _sectionTitle(String text, IconData icon) => Row(children: [
-        Icon(icon, size: 20, color: violet),
+        Icon(icon, size: 20, color: AppColors.primary),
         const SizedBox(width: 8),
         Text(text,
             style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
@@ -110,161 +112,181 @@ class WakeAlarmsScreen extends StatelessWidget {
     return result;
   }
 
-  Widget _shiftAlarmCard(BuildContext context, _TodayShiftAlarm item) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF7F3FF),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFE4DCFF)),
-        ),
-        child: Row(children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: const BoxDecoration(
-              color: Color(0xFFEDE8FF),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.badge_outlined, color: violet),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(_formatTime(item.alarmTime),
-                    style: const TextStyle(
-                        fontSize: 26, fontWeight: FontWeight.w900)),
-                Text(item.title,
-                    style: const TextStyle(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 4),
-                Text(
-                    'بداية الشفت ${_formatTime(item.shiftStart)} • يختفي بعد الرنين',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'تعديل تنبيه اليوم',
-            onPressed: () => _editShiftAlarm(context, item),
-            icon: const Icon(Icons.edit_rounded, color: violet),
-          ),
-        ]),
-      );
-
-  Widget _emptyState(BuildContext context) => Container(
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-        ),
-        child: Column(children: [
-          Container(
-            width: 74,
-            height: 74,
-            decoration: BoxDecoration(
-              color: violet.withValues(alpha: .12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.bedtime_outlined, color: violet, size: 36),
-          ),
-          const SizedBox(height: 18),
-          const Text('أضف أول منبّه',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text('افتح محرر Shiftly الكامل واضبط الوقت والنغمة والتكرار والتحديات.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600)),
-        ]),
-      );
-
-  Widget _alarmCard(BuildContext context, WakeAlarm alarm) => Dismissible(
-        key: ValueKey(alarm.id),
-        direction: DismissDirection.endToStart,
-        background: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 22),
-          alignment: Alignment.centerLeft,
+  Widget _shiftAlarmCard(BuildContext context, _TodayShiftAlarm item) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.primary.withValues(alpha: .18)),
+      ),
+      child: Row(children: [
+        Container(
+          width: 46,
+          height: 46,
           decoration: BoxDecoration(
-            color: Colors.red.shade50,
+            color: AppColors.primary.withValues(alpha: .12),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.badge_outlined, color: AppColors.primary),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(_formatTime(item.alarmTime),
+                  style: const TextStyle(
+                      fontSize: 26, fontWeight: FontWeight.w900)),
+              Text(item.title,
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              Text(
+                'بداية الشفت ${_formatTime(item.shiftStart)} • يختفي بعد الرنين',
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          tooltip: 'تعديل تنبيه اليوم',
+          onPressed: () => _editShiftAlarm(context, item),
+          icon: const Icon(Icons.edit_rounded, color: AppColors.primary),
+        ),
+      ]),
+    );
+  }
+
+  Widget _emptyState(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(28),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Column(children: [
+        Container(
+          width: 74,
+          height: 74,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: .12),
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.bedtime_outlined,
+              color: AppColors.primary, size: 36),
+        ),
+        const SizedBox(height: 18),
+        const Text('أضف أول منبّه',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 8),
+        Text(
+          'افتح محرر Shiftly الكامل واضبط الوقت والنغمة والتكرار والتحديات.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: scheme.onSurfaceVariant),
+        ),
+      ]),
+    );
+  }
+
+  Widget _alarmCard(BuildContext context, WakeAlarm alarm) {
+    final scheme = Theme.of(context).colorScheme;
+    return Dismissible(
+      key: ValueKey(alarm.id),
+      direction: DismissDirection.endToStart,
+      background: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+          color: AppColors.danger.withValues(alpha: .10),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
+      ),
+      confirmDismiss: (_) => _confirmDelete(context, alarm),
+      onDismissed: (_) => onDelete(alarm),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: () => _openEditor(context, alarm: alarm),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: scheme.surface,
             borderRadius: BorderRadius.circular(24),
           ),
-          child: Icon(Icons.delete_outline_rounded, color: Colors.red.shade700),
-        ),
-        confirmDismiss: (_) => _confirmDelete(context, alarm),
-        onDismissed: (_) => onDelete(alarm),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(24),
-          onTap: () => _openEditor(context, alarm: alarm),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Row(children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_formatClock(alarm.hour, alarm.minute),
+          child: Row(children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _formatClock(alarm.hour, alarm.minute),
+                    style: TextStyle(
+                      fontSize: 31,
+                      fontWeight: FontWeight.w900,
+                      color: alarm.enabled
+                          ? scheme.onSurface
+                          : scheme.onSurface.withValues(alpha: .35),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(alarm.label,
+                      style: const TextStyle(fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 7),
+                  Row(children: [
+                    const Icon(Icons.music_note_rounded,
+                        size: 14, color: AppColors.primary),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        alarm.ringtoneName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 31,
-                          fontWeight: FontWeight.w900,
-                          color: alarm.enabled ? Colors.black87 : Colors.black38,
-                        )),
-                    const SizedBox(height: 4),
-                    Text(alarm.label,
-                        style: const TextStyle(fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 7),
-                    Row(children: [
-                      const Icon(Icons.music_note_rounded,
-                          size: 14, color: violet),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(alarm.ringtoneName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.grey.shade600)),
+                            fontSize: 12, color: scheme.onSurfaceVariant),
                       ),
-                    ]),
-                    const SizedBox(height: 7),
-                    Text(_daysLabel(alarm.weekdays),
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                    const SizedBox(height: 10),
-                    Wrap(spacing: 7, runSpacing: 7, children: [
-                      if (alarm.challengeEnabled)
-                        _chip(Icons.calculate_outlined, 'تحدي'),
-                      if (alarm.sleepyMeProtection)
-                        _chip(Icons.lock_outline_rounded, 'Sleepy-Me'),
-                      if (alarm.proofOfAwake)
-                        _chip(Icons.verified_outlined, 'إثبات الاستيقاظ'),
-                      _chip(Icons.bolt_rounded, '${alarm.wakeStrength}%'),
-                    ]),
-                  ],
-                ),
+                    ),
+                  ]),
+                  const SizedBox(height: 7),
+                  Text(_daysLabel(alarm.weekdays),
+                      style: TextStyle(
+                          fontSize: 12, color: scheme.onSurfaceVariant)),
+                  const SizedBox(height: 10),
+                  Wrap(spacing: 7, runSpacing: 7, children: [
+                    if (alarm.challengeEnabled)
+                      _chip(context, Icons.calculate_outlined, 'تحدي'),
+                    if (alarm.sleepyMeProtection)
+                      _chip(context, Icons.lock_outline_rounded, 'Sleepy-Me'),
+                    if (alarm.proofOfAwake)
+                      _chip(context, Icons.verified_outlined, 'إثبات الاستيقاظ'),
+                    _chip(context, Icons.bolt_rounded, '${alarm.wakeStrength}%'),
+                  ]),
+                ],
               ),
-              Switch(
-                value: alarm.enabled,
-                activeThumbColor: violet,
-                onChanged: (value) => onToggle(alarm, value),
-              ),
-            ]),
-          ),
+            ),
+            Switch(
+              value: alarm.enabled,
+              activeThumbColor: AppColors.primary,
+              onChanged: (value) => onToggle(alarm, value),
+            ),
+          ]),
         ),
-      );
+      ),
+    );
+  }
 
-  Widget _chip(IconData icon, String label) => Container(
+  Widget _chip(BuildContext context, IconData icon, String label) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFFF3F0FF),
+          color: AppColors.primary.withValues(alpha: .09),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 15, color: violet),
+          Icon(icon, size: 15, color: AppColors.primary),
           const SizedBox(width: 5),
           Text(label,
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
@@ -282,8 +304,10 @@ class WakeAlarmsScreen extends StatelessWidget {
                 onPressed: () => Navigator.pop(context, false),
                 child: const Text('إلغاء')),
             FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('حذف')),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('حذف'),
+            ),
           ],
         ),
       ) ??
@@ -318,17 +342,23 @@ class WakeAlarmsScreen extends StatelessWidget {
   }
 
   Future<void> _openEditor(BuildContext context, {WakeAlarm? alarm}) async {
-    final result = await Navigator.of(context).push<WakeAlarm>(
-      MaterialPageRoute<WakeAlarm>(
+    final result = await Navigator.of(context).push<AlarmEditorResult>(
+      MaterialPageRoute<AlarmEditorResult>(
         fullscreenDialog: true,
         builder: (_) => AlarmEditorScreen(alarm: alarm),
       ),
     );
     if (result == null) return;
+    if (result.deleteRequested && alarm != null) {
+      await onDelete(alarm);
+      return;
+    }
+    final saved = result.alarm;
+    if (saved == null) return;
     if (alarm == null) {
-      await onAdd(result);
+      await onAdd(saved);
     } else {
-      await onUpdate(result);
+      await onUpdate(saved);
     }
   }
 
