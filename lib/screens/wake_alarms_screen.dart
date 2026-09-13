@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/wake_alarm.dart';
 import '../models/work_pattern.dart';
 import '../services/alarm_service.dart';
+import 'alarm_editor_screen.dart';
 
 class WakeAlarmsScreen extends StatelessWidget {
   const WakeAlarmsScreen({
@@ -138,7 +139,8 @@ class WakeAlarmsScreen extends StatelessWidget {
                 Text(item.title,
                     style: const TextStyle(fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
-                Text('بداية الشفت ${_formatTime(item.shiftStart)} • يختفي بعد الرنين',
+                Text(
+                    'بداية الشفت ${_formatTime(item.shiftStart)} • يختفي بعد الرنين',
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
               ],
             ),
@@ -171,7 +173,7 @@ class WakeAlarmsScreen extends StatelessWidget {
           const Text('أضف أول منبّه',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
-          Text('اختَر الوقت، أيام الأسبوع، وتخصيصات الاستيقاظ من شاشة واحدة.',
+          Text('افتح محرر Shiftly الكامل واضبط الوقت والنغمة والتكرار والتحديات.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey.shade600)),
         ]),
@@ -216,7 +218,20 @@ class WakeAlarmsScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(alarm.label,
                         style: const TextStyle(fontWeight: FontWeight.w800)),
-                    const SizedBox(height: 9),
+                    const SizedBox(height: 7),
+                    Row(children: [
+                      const Icon(Icons.music_note_rounded,
+                          size: 14, color: violet),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(alarm.ringtoneName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12, color: Colors.grey.shade600)),
+                      ),
+                    ]),
+                    const SizedBox(height: 7),
                     Text(_daysLabel(alarm.weekdays),
                         style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
                     const SizedBox(height: 10),
@@ -303,11 +318,11 @@ class WakeAlarmsScreen extends StatelessWidget {
   }
 
   Future<void> _openEditor(BuildContext context, {WakeAlarm? alarm}) async {
-    final result = await showModalBottomSheet<WakeAlarm>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (_) => _AlarmEditor(alarm: alarm),
+    final result = await Navigator.of(context).push<WakeAlarm>(
+      MaterialPageRoute<WakeAlarm>(
+        fullscreenDialog: true,
+        builder: (_) => AlarmEditorScreen(alarm: alarm),
+      ),
     );
     if (result == null) return;
     if (alarm == null) {
@@ -347,189 +362,9 @@ class _TodayShiftAlarm {
     required this.shiftStart,
     required this.alarmTime,
   });
+
   final int id;
   final String title;
   final DateTime shiftStart;
   final DateTime alarmTime;
-}
-
-class _AlarmEditor extends StatefulWidget {
-  const _AlarmEditor({this.alarm});
-  final WakeAlarm? alarm;
-
-  @override
-  State<_AlarmEditor> createState() => _AlarmEditorState();
-}
-
-class _AlarmEditorState extends State<_AlarmEditor> {
-  static const violet = Color(0xFF6D4AFF);
-  late TimeOfDay time;
-  late TextEditingController labelController;
-  late Set<int> days;
-  late bool challenge;
-  late bool sleepyMe;
-  late bool proofOfAwake;
-
-  @override
-  void initState() {
-    super.initState();
-    final alarm = widget.alarm;
-    time = alarm == null
-        ? TimeOfDay.now()
-        : TimeOfDay(hour: alarm.hour, minute: alarm.minute);
-    labelController = TextEditingController(text: alarm?.label ?? 'استيقاظ');
-    days = Set<int>.from(alarm?.weekdays ?? const [1, 2, 3, 4, 5, 6, 7]);
-    challenge = alarm?.challengeEnabled ?? true;
-    sleepyMe = alarm?.sleepyMeProtection ?? true;
-    proofOfAwake = alarm?.proofOfAwake ?? false;
-  }
-
-  @override
-  void dispose() {
-    labelController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-          20, 18, 20, MediaQuery.viewInsetsOf(context).bottom + 24),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(children: [
-              Expanded(
-                child: Text(
-                    widget.alarm == null ? 'منبّه جديد' : 'تعديل المنبّه',
-                    style: const TextStyle(
-                        fontSize: 24, fontWeight: FontWeight.w900)),
-              ),
-              IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close)),
-            ]),
-            const SizedBox(height: 12),
-            InkWell(
-              borderRadius: BorderRadius.circular(22),
-              onTap: _pickTime,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 22),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3F0FF),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Column(children: [
-                  const Text('وقت المنبّه'),
-                  const SizedBox(height: 6),
-                  Text(time.format(context),
-                      style: const TextStyle(
-                          fontSize: 38,
-                          fontWeight: FontWeight.w900,
-                          color: violet)),
-                ]),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: labelController,
-              decoration: const InputDecoration(
-                labelText: 'اسم المنبّه',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text('أيام التكرار',
-                style: TextStyle(fontWeight: FontWeight.w900)),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: const [
-                (7, 'أحد'),
-                (1, 'إثن'),
-                (2, 'ثلا'),
-                (3, 'أرب'),
-                (4, 'خمي'),
-                (5, 'جمع'),
-                (6, 'سبت'),
-              ].map((entry) {
-                final selected = days.contains(entry.$1);
-                return FilterChip(
-                  label: Text(entry.$2),
-                  selected: selected,
-                  onSelected: (value) => setState(() {
-                    if (value) {
-                      days.add(entry.$1);
-                    } else if (days.length > 1) {
-                      days.remove(entry.$1);
-                    }
-                  }),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 20),
-            const Text('تخصيصات Shiftly',
-                style: TextStyle(fontWeight: FontWeight.w900)),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('تحدي الاستيقاظ'),
-              subtitle: const Text('حل تحدي قبل إيقاف المنبّه'),
-              value: challenge,
-              onChanged: (value) => setState(() => challenge = value),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Sleepy-Me Protection'),
-              subtitle: const Text('حماية من إغلاق المنبّه وأنت نص نايم'),
-              value: sleepyMe,
-              onChanged: (value) => setState(() => sleepyMe = value),
-            ),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('إثبات الاستيقاظ'),
-              subtitle: const Text('تأكيد إضافي بعد الاستيقاظ'),
-              value: proofOfAwake,
-              onChanged: (value) => setState(() => proofOfAwake = value),
-            ),
-            const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: _save,
-              icon: const Icon(Icons.alarm_on_rounded),
-              label: Text(
-                  widget.alarm == null ? 'إضافة المنبّه' : 'حفظ التعديلات'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _pickTime() async {
-    final selected = await showTimePicker(context: context, initialTime: time);
-    if (selected != null) setState(() => time = selected);
-  }
-
-  void _save() {
-    final label = labelController.text.trim();
-    if (label.isEmpty) return;
-    final old = widget.alarm;
-    Navigator.pop(
-      context,
-      WakeAlarm(
-        id: old?.id ?? 0,
-        hour: time.hour,
-        minute: time.minute,
-        label: label,
-        enabled: old?.enabled ?? true,
-        weekdays: days.toList()..sort(),
-        challengeEnabled: challenge,
-        sleepyMeProtection: sleepyMe,
-        proofOfAwake: proofOfAwake,
-        ringtonePath: old?.ringtonePath,
-      ),
-    );
-  }
 }
