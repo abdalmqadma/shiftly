@@ -1,6 +1,27 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors.dart';
+import '../core/widgets/app_section_card.dart';
+import '../core/widgets/app_setting_switch_tile.dart';
+import '../core/widgets/time_wheel_picker.dart';
 import '../models/wake_alarm.dart';
 import '../services/ringtone_service.dart';
+
+class AlarmEditorResult {
+  const AlarmEditorResult._({this.alarm, this.deleteRequested = false});
+
+  final WakeAlarm? alarm;
+  final bool deleteRequested;
+
+  factory AlarmEditorResult.save(WakeAlarm alarm) =>
+      AlarmEditorResult._(alarm: alarm);
+
+  const factory AlarmEditorResult.delete() = _DeleteAlarmEditorResult;
+}
+
+class _DeleteAlarmEditorResult extends AlarmEditorResult {
+  const _DeleteAlarmEditorResult()
+      : super._(alarm: null, deleteRequested: true);
+}
 
 class AlarmEditorScreen extends StatefulWidget {
   const AlarmEditorScreen({super.key, this.alarm});
@@ -12,9 +33,6 @@ class AlarmEditorScreen extends StatefulWidget {
 }
 
 class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
-  static const violet = Color(0xFF6D4AFF);
-  static const surface = Color(0xFFFFFBF7);
-
   late int hour12;
   late int minute;
   late int periodIndex;
@@ -38,7 +56,9 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
     minute = alarm?.minute ?? TimeOfDay.now().minute;
     periodIndex = initialHour24 >= 12 ? 1 : 0;
     labelController = TextEditingController(text: alarm?.label ?? 'استيقاظ');
-    days = Set<int>.from(alarm?.weekdays ?? const [1, 2, 3, 4, 5, 6, 7]);
+    days = Set<int>.from(
+      alarm?.weekdays ?? const [1, 2, 3, 4, 5, 6, 7],
+    );
     challenge = alarm?.challengeEnabled ?? true;
     sleepyMe = alarm?.sleepyMeProtection ?? true;
     proofOfAwake = alarm?.proofOfAwake ?? false;
@@ -63,11 +83,9 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: surface,
       appBar: AppBar(
-        backgroundColor: surface,
-        elevation: 0,
         title: Text(
           widget.alarm == null ? 'منبّه جديد' : 'تعديل المنبّه',
           style: const TextStyle(fontWeight: FontWeight.w900),
@@ -77,7 +95,10 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
             onPressed: _save,
             child: const Text(
               'حفظ',
-              style: TextStyle(fontWeight: FontWeight.w900, color: violet),
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                color: AppColors.primary,
+              ),
             ),
           ),
           const SizedBox(width: 8),
@@ -87,9 +108,26 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           children: [
-            _timeCard(),
+            TimeWheelPicker(
+              hourController: hourController,
+              minuteController: minuteController,
+              periodController: periodController,
+              onHourChanged: (index) => setState(() => hour12 = index + 1),
+              onMinuteChanged: (index) => setState(() => minute = index),
+              onPeriodChanged: (index) => setState(() => periodIndex = index),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                _nextLabel(),
+                style: TextStyle(
+                  color: scheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
             const SizedBox(height: 18),
-            _section(
+            AppSectionCard(
               title: 'تفاصيل المنبّه',
               child: TextField(
                 controller: labelController,
@@ -97,17 +135,16 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
                 decoration: const InputDecoration(
                   hintText: 'مثال: الجامعة، الدوام، الجيم',
                   prefixIcon: Icon(Icons.label_outline_rounded),
-                  border: InputBorder.none,
                 ),
               ),
             ),
             const SizedBox(height: 14),
-            _section(
+            AppSectionCard(
               title: 'أيام التكرار',
               child: _daysPicker(),
             ),
             const SizedBox(height: 14),
-            _section(
+            AppSectionCard(
               title: 'الصوت',
               child: ListTile(
                 contentPadding: EdgeInsets.zero,
@@ -115,24 +152,29 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: violet.withValues(alpha: .10),
+                    color: AppColors.primary.withValues(alpha: .10),
                     borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(Icons.music_note_rounded, color: violet),
+                  child: const Icon(
+                    Icons.music_note_rounded,
+                    color: AppColors.primary,
+                  ),
                 ),
-                title: const Text('نغمة المنبّه',
-                    style: TextStyle(fontWeight: FontWeight.w800)),
+                title: const Text(
+                  'نغمة المنبّه',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
                 subtitle: Text(ringtone.name),
                 trailing: const Icon(Icons.chevron_left_rounded),
                 onTap: _pickRingtone,
               ),
             ),
             const SizedBox(height: 14),
-            _section(
+            AppSectionCard(
               title: 'تخصيصات Shiftly',
               child: Column(
                 children: [
-                  _settingTile(
+                  AppSettingSwitchTile(
                     icon: Icons.calculate_outlined,
                     title: 'تحدي الاستيقاظ',
                     subtitle: 'ما ينطفي المنبّه قبل ما تكمل التحدي',
@@ -140,7 +182,7 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
                     onChanged: (value) => setState(() => challenge = value),
                   ),
                   const Divider(height: 1),
-                  _settingTile(
+                  AppSettingSwitchTile(
                     icon: Icons.lock_outline_rounded,
                     title: 'Sleepy-Me Protection',
                     subtitle: 'يحميك من إطفاء المنبّه وأنت نص نايم',
@@ -148,7 +190,7 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
                     onChanged: (value) => setState(() => sleepyMe = value),
                   ),
                   const Divider(height: 1),
-                  _settingTile(
+                  AppSettingSwitchTile(
                     icon: Icons.verified_outlined,
                     title: 'إثبات الاستيقاظ',
                     subtitle: 'تأكيد إضافي بعد ما توقف المنبّه',
@@ -162,152 +204,38 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
             FilledButton.icon(
               onPressed: _save,
               style: FilledButton.styleFrom(
-                backgroundColor: violet,
+                backgroundColor: AppColors.primary,
                 minimumSize: const Size.fromHeight(56),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
               ),
               icon: const Icon(Icons.alarm_on_rounded),
               label: Text(
                 widget.alarm == null ? 'إضافة المنبّه' : 'حفظ التعديلات',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
+            if (widget.alarm != null) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _requestDelete,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.danger,
+                  side: BorderSide(
+                    color: AppColors.danger.withValues(alpha: .45),
+                  ),
+                  minimumSize: const Size.fromHeight(54),
+                ),
+                icon: const Icon(Icons.delete_outline_rounded),
+                label: const Text(
+                  'حذف المنبّه',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ],
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _timeCard() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 18, 16, 18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF4F0FF),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0xFFE4DCFF)),
-      ),
-      child: Column(
-        children: [
-          const Text(
-            'اسحب للأعلى أو للأسفل لتحديد الوقت',
-            style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF6C6580)),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 180,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  height: 58,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: const [
-                      BoxShadow(
-                        blurRadius: 18,
-                        offset: Offset(0, 6),
-                        color: Color(0x14000000),
-                      ),
-                    ],
-                  ),
-                ),
-                Row(
-                  textDirection: TextDirection.ltr,
-                  children: [
-                    Expanded(
-                      child: _wheel(
-                        controller: hourController,
-                        count: 12,
-                        valueBuilder: (index) => '${index + 1}'.padLeft(2, '0'),
-                        onChanged: (index) => setState(() => hour12 = index + 1),
-                      ),
-                    ),
-                    const Text(':',
-                        style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900)),
-                    Expanded(
-                      child: _wheel(
-                        controller: minuteController,
-                        count: 60,
-                        valueBuilder: (index) => '$index'.padLeft(2, '0'),
-                        onChanged: (index) => setState(() => minute = index),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 72,
-                      child: _wheel(
-                        controller: periodController,
-                        count: 2,
-                        valueBuilder: (index) => index == 0 ? 'ص' : 'م',
-                        onChanged: (index) => setState(() => periodIndex = index),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _nextLabel(),
-            style: const TextStyle(color: Color(0xFF6C6580), fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _wheel({
-    required FixedExtentScrollController controller,
-    required int count,
-    required String Function(int index) valueBuilder,
-    required ValueChanged<int> onChanged,
-  }) {
-    return ListWheelScrollView.useDelegate(
-      controller: controller,
-      itemExtent: 52,
-      physics: const FixedExtentScrollPhysics(),
-      diameterRatio: 1.35,
-      perspective: 0.003,
-      squeeze: 0.95,
-      overAndUnderCenterOpacity: .28,
-      onSelectedItemChanged: onChanged,
-      childDelegate: ListWheelChildBuilderDelegate(
-        childCount: count,
-        builder: (context, index) {
-          if (index == null) return null;
-          return Center(
-            child: Text(
-              valueBuilder(index),
-              style: const TextStyle(
-                fontSize: 31,
-                fontWeight: FontWeight.w900,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _section({required String title, required Widget child}) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          child,
-        ],
       ),
     );
   }
@@ -322,6 +250,8 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
       (5, 'جمع'),
       (6, 'سبت'),
     ];
+    final scheme = Theme.of(context).colorScheme;
+
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -330,10 +260,12 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
         return FilterChip(
           selected: selected,
           label: Text(entry.$2),
-          selectedColor: violet.withValues(alpha: .14),
-          checkmarkColor: violet,
+          selectedColor: AppColors.primary.withValues(alpha: .14),
+          checkmarkColor: AppColors.primary,
           side: BorderSide(
-            color: selected ? violet.withValues(alpha: .35) : Colors.grey.shade300,
+            color: selected
+                ? AppColors.primary.withValues(alpha: .35)
+                : scheme.outlineVariant,
           ),
           onSelected: (value) {
             setState(() {
@@ -349,24 +281,6 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
     );
   }
 
-  Widget _settingTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return SwitchListTile(
-      contentPadding: EdgeInsets.zero,
-      secondary: Icon(icon, color: violet),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-      subtitle: Text(subtitle),
-      value: value,
-      activeThumbColor: violet,
-      onChanged: onChanged,
-    );
-  }
-
   Future<void> _pickRingtone() async {
     final choice = await showModalBottomSheet<int>(
       context: context,
@@ -379,24 +293,26 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
             children: [
               const Align(
                 alignment: Alignment.centerRight,
-                child: Text('اختيار النغمة',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                child: Text(
+                  'اختيار النغمة',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                ),
               ),
               const SizedBox(height: 10),
-              ListTile(
-                leading: const Icon(Icons.alarm_rounded, color: violet),
-                title: const Text('نغمة المنبّه الافتراضية'),
-                onTap: () => Navigator.pop(context, 0),
+              _ringtoneOption(
+                icon: Icons.alarm_rounded,
+                title: 'نغمة المنبّه الافتراضية',
+                value: 0,
               ),
-              ListTile(
-                leading: const Icon(Icons.phone_android_rounded, color: violet),
-                title: const Text('اختيار نغمة من الهاتف'),
-                onTap: () => Navigator.pop(context, 1),
+              _ringtoneOption(
+                icon: Icons.phone_android_rounded,
+                title: 'اختيار نغمة من الهاتف',
+                value: 1,
               ),
-              ListTile(
-                leading: const Icon(Icons.library_music_rounded, color: violet),
-                title: const Text('اختيار ملف صوتي مخصص'),
-                onTap: () => Navigator.pop(context, 2),
+              _ringtoneOption(
+                icon: Icons.library_music_rounded,
+                title: 'اختيار ملف صوتي مخصص',
+                value: 2,
               ),
             ],
           ),
@@ -416,6 +332,18 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
     if (selected != null && mounted) {
       setState(() => ringtone = selected);
     }
+  }
+
+  Widget _ringtoneOption({
+    required IconData icon,
+    required String title,
+    required int value,
+  }) {
+    return ListTile(
+      leading: Icon(icon, color: AppColors.primary),
+      title: Text(title),
+      onTap: () => Navigator.pop(context, value),
+    );
   }
 
   int get _hour24 {
@@ -456,19 +384,47 @@ class _AlarmEditorScreenState extends State<AlarmEditorScreen> {
     final old = widget.alarm;
     Navigator.pop(
       context,
-      WakeAlarm(
-        id: old?.id ?? 0,
-        hour: _hour24,
-        minute: minute,
-        label: label,
-        enabled: old?.enabled ?? true,
-        weekdays: days.toList()..sort(),
-        challengeEnabled: challenge,
-        sleepyMeProtection: sleepyMe,
-        proofOfAwake: proofOfAwake,
-        ringtonePath: ringtone.path,
-        ringtoneName: ringtone.name,
+      AlarmEditorResult.save(
+        WakeAlarm(
+          id: old?.id ?? 0,
+          hour: _hour24,
+          minute: minute,
+          label: label,
+          enabled: old?.enabled ?? true,
+          weekdays: days.toList()..sort(),
+          challengeEnabled: challenge,
+          sleepyMeProtection: sleepyMe,
+          proofOfAwake: proofOfAwake,
+          ringtonePath: ringtone.path,
+          ringtoneName: ringtone.name,
+        ),
       ),
     );
+  }
+
+  Future<void> _requestDelete() async {
+    final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('حذف المنبّه؟'),
+            content: Text(widget.alarm!.label),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('إلغاء'),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.danger,
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('حذف'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!confirmed || !mounted) return;
+    Navigator.pop(context, const AlarmEditorResult.delete());
   }
 }
