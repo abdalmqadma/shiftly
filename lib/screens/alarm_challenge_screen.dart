@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors.dart';
 
 class AlarmChallengeScreen extends StatefulWidget {
   const AlarmChallengeScreen({
@@ -17,7 +18,6 @@ class AlarmChallengeScreen extends StatefulWidget {
 }
 
 class _AlarmChallengeScreenState extends State<AlarmChallengeScreen> {
-  static const violet = Color(0xFF6D4AFF);
   final controller = TextEditingController();
   late int first;
   late int second;
@@ -79,7 +79,7 @@ class _AlarmChallengeScreenState extends State<AlarmChallengeScreen> {
                   width: 92,
                   height: 92,
                   decoration: BoxDecoration(
-                    color: violet.withValues(alpha: .22),
+                    color: AppColors.primary.withValues(alpha: .22),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.alarm_rounded,
@@ -106,7 +106,9 @@ class _AlarmChallengeScreenState extends State<AlarmChallengeScreen> {
                     Text('$first + $second = ؟',
                         textDirection: TextDirection.ltr,
                         style: const TextStyle(
-                            fontSize: 38, fontWeight: FontWeight.w900)),
+                            color: Colors.black87,
+                            fontSize: 38,
+                            fontWeight: FontWeight.w900)),
                     const SizedBox(height: 20),
                     TextField(
                       controller: controller,
@@ -114,20 +116,22 @@ class _AlarmChallengeScreenState extends State<AlarmChallengeScreen> {
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
                       onSubmitted: (_) => _submit(),
+                      style: const TextStyle(color: Colors.black87),
                       decoration: InputDecoration(
                         hintText: 'اكتب الإجابة',
                         errorText: error,
                         filled: true,
-                        fillColor: const Color(0xFFF5F2FF),
+                        fillColor: AppColors.primary.withValues(alpha: .08),
                         border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(18),
-                            borderSide: BorderSide.none),
+                          borderRadius: BorderRadius.circular(18),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
                     FilledButton(
                       style: FilledButton.styleFrom(
-                        backgroundColor: violet,
+                        backgroundColor: AppColors.primary,
                         minimumSize: const Size.fromHeight(54),
                       ),
                       onPressed: _submit,
