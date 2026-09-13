@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
@@ -120,19 +119,16 @@ class TimeWheelPicker extends StatelessWidget {
       onSelectedItemChanged: onChanged,
       childDelegate: ListWheelChildBuilderDelegate(
         childCount: count,
-        builder: (context, index) {
-          if (index == null) return null;
-          return Center(
-            child: Text(
-              valueBuilder(index),
-              style: const TextStyle(
-                fontSize: 31,
-                fontWeight: FontWeight.w900,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
+        builder: (context, index) => Center(
+          child: Text(
+            valueBuilder(index),
+            style: const TextStyle(
+              fontSize: 31,
+              fontWeight: FontWeight.w900,
+              fontFeatures: [FontFeature.tabularFigures()],
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }
