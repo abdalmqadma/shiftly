@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors.dart';
 import '../models/shift_exception.dart';
 import '../models/wake_alarm.dart';
 import '../models/work_pattern.dart';
@@ -14,6 +15,8 @@ class MainShell extends StatefulWidget {
     required this.pattern,
     required this.alarms,
     required this.shiftExceptions,
+    required this.themeMode,
+    required this.onThemeModeChanged,
     required this.onEditPattern,
     required this.onAddAlarm,
     required this.onUpdateAlarm,
@@ -27,6 +30,8 @@ class MainShell extends StatefulWidget {
   final WorkPattern? pattern;
   final List<WakeAlarm> alarms;
   final List<ShiftException> shiftExceptions;
+  final ThemeMode themeMode;
+  final Future<void> Function(ThemeMode mode) onThemeModeChanged;
   final VoidCallback onEditPattern;
   final Future<void> Function(WakeAlarm alarm) onAddAlarm;
   final Future<void> Function(WakeAlarm alarm) onUpdateAlarm;
@@ -52,7 +57,6 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int page = 0;
-  static const violet = Color(0xFF6D4AFF);
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +82,7 @@ class _MainShellState extends State<MainShell> {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: violet,
+              color: AppColors.primary,
               borderRadius: BorderRadius.circular(11),
             ),
             child: const Icon(Icons.alarm_rounded, color: Colors.white, size: 21),
@@ -121,31 +125,36 @@ class _MainShellState extends State<MainShell> {
           const Text('وضع الشفتات',
               style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
           const SizedBox(height: 6),
-          Text('ميزة اختيارية للي دوامهم بنظام دورات متكررة.',
-              style: TextStyle(color: Colors.grey.shade600)),
+          Text(
+            'ميزة اختيارية للي دوامهم بنظام دورات متكررة.',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
           const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(28),
-            ),
-            child: Column(children: [
-              const Icon(Icons.work_history_outlined, size: 58, color: violet),
-              const SizedBox(height: 18),
-              const Text('فعّل جدول الشفتات',
-                  style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
-              const SizedBox(height: 8),
-              Text('مثال: 48 ساعة دوام / 24 ساعة راحة، أو أي دورة خاصة فيك.',
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(children: [
+                const Icon(Icons.work_history_outlined,
+                    size: 58, color: AppColors.primary),
+                const SizedBox(height: 18),
+                const Text('فعّل جدول الشفتات',
+                    style: TextStyle(fontSize: 21, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 8),
+                Text(
+                  'مثال: 48 ساعة دوام / 24 ساعة راحة، أو أي دورة خاصة فيك.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade600)),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: widget.onEditPattern,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('إعداد نظام الشفتات'),
-              ),
-            ]),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                FilledButton.icon(
+                  onPressed: widget.onEditPattern,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('إعداد نظام الشفتات'),
+                ),
+              ]),
+            ),
           ),
         ],
       );
@@ -159,9 +168,9 @@ class _MainShellState extends State<MainShell> {
           child: ListTile(
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            leading: const CircleAvatar(
-              backgroundColor: Color(0xFFFFECE8),
-              child: Icon(Icons.emergency_outlined, color: Color(0xFFD84B35)),
+            leading: CircleAvatar(
+              backgroundColor: AppColors.danger.withValues(alpha: .12),
+              child: const Icon(Icons.emergency_outlined, color: AppColors.danger),
             ),
             title: const Text('طوارئ واستثناءات الشفتات',
                 style: TextStyle(fontWeight: FontWeight.w900)),
@@ -225,56 +234,97 @@ class _MainShellState extends State<MainShell> {
               style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900)),
           const SizedBox(height: 18),
           Card(
-            child: ListTile(
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              leading: const Icon(Icons.health_and_safety_outlined, color: violet),
-              title: const Text('فحص جاهزية المنبّه',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
-              subtitle: const Text('الإشعارات + صلاحية المنبّه الدقيق'),
-              trailing: const Icon(Icons.chevron_left_rounded),
-              onTap: _showReadiness,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('المظهر',
+                      style: TextStyle(fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 12),
+                  SegmentedButton<ThemeMode>(
+                    segments: const [
+                      ButtonSegment(
+                        value: ThemeMode.system,
+                        icon: Icon(Icons.brightness_auto_rounded),
+                        label: Text('النظام'),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        icon: Icon(Icons.light_mode_rounded),
+                        label: Text('فاتح'),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.dark,
+                        icon: Icon(Icons.dark_mode_rounded),
+                        label: Text('داكن'),
+                      ),
+                    ],
+                    selected: {widget.themeMode},
+                    onSelectionChanged: (value) {
+                      widget.onThemeModeChanged(value.first);
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
-          Card(
-            child: ListTile(
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              leading: const Icon(Icons.alarm_on_rounded, color: violet),
-              title: const Text('اختبار المنبّه',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
-              subtitle: const Text('يرن بعد دقيقة ويطلب تحدي الحساب'),
-              trailing: const Icon(Icons.play_arrow_rounded),
-              onTap: () async {
-                await AlarmService.scheduleTestAlarm(
-                  audioPath: widget.pattern?.ringtonePath,
-                );
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('تم ضبط الاختبار بعد دقيقة')),
-                );
-              },
-            ),
+          _settingsTile(
+            icon: Icons.health_and_safety_outlined,
+            title: 'فحص جاهزية المنبّه',
+            subtitle: 'الإشعارات + صلاحية المنبّه الدقيق',
+            trailing: const Icon(Icons.chevron_left_rounded),
+            onTap: _showReadiness,
+          ),
+          const SizedBox(height: 12),
+          _settingsTile(
+            icon: Icons.alarm_on_rounded,
+            title: 'اختبار المنبّه',
+            subtitle: 'يرن بعد دقيقة ويطلب تحدي الحساب',
+            trailing: const Icon(Icons.play_arrow_rounded),
+            onTap: () async {
+              await AlarmService.scheduleTestAlarm(
+                audioPath: widget.pattern?.ringtonePath,
+              );
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('تم ضبط الاختبار بعد دقيقة')),
+              );
+            },
           ),
           if (widget.pattern != null) ...[
             const SizedBox(height: 12),
-            Card(
-              child: ListTile(
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                leading: const Icon(Icons.edit_calendar_rounded, color: violet),
-                title: const Text('تعديل نظام المناوبة',
-                    style: TextStyle(fontWeight: FontWeight.w800)),
-                subtitle: Text(
-                    '${widget.pattern!.shifts.length} شِفتات داخل دورة مدتها ${widget.pattern!.cycleMinutes ~/ 60} ساعة'),
-                trailing: const Icon(Icons.chevron_left_rounded),
-                onTap: widget.onEditPattern,
-              ),
+            _settingsTile(
+              icon: Icons.edit_calendar_rounded,
+              title: 'تعديل نظام المناوبة',
+              subtitle:
+                  '${widget.pattern!.shifts.length} شِفتات داخل دورة مدتها ${widget.pattern!.cycleMinutes ~/ 60} ساعة',
+              trailing: const Icon(Icons.chevron_left_rounded),
+              onTap: widget.onEditPattern,
             ),
           ],
         ],
       );
+
+  Widget _settingsTile({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Widget trailing,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        leading: Icon(icon, color: AppColors.primary),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+        subtitle: Text(subtitle),
+        trailing: trailing,
+        onTap: onTap,
+      ),
+    );
+  }
 
   Future<void> _showReadiness() async {
     final result = await AlarmService.readiness();
@@ -310,8 +360,10 @@ class _MainShellState extends State<MainShell> {
   }
 
   Widget _readinessRow(String label, bool granted) => Row(children: [
-        Icon(granted ? Icons.check_circle : Icons.error_outline,
-            color: granted ? Colors.green : Colors.orange),
+        Icon(
+          granted ? Icons.check_circle : Icons.error_outline,
+          color: granted ? AppColors.success : AppColors.warning,
+        ),
         const SizedBox(width: 10),
         Expanded(child: Text(label)),
         Text(granted ? 'جاهز' : 'مطلوب',
