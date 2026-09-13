@@ -10,6 +10,7 @@ class WakeAlarm {
     this.proofOfAwake = false,
     this.weekdays = const [1, 2, 3, 4, 5, 6, 7],
     this.ringtonePath,
+    this.ringtoneName = 'نغمة المنبّه الافتراضية',
   });
 
   final int id;
@@ -22,6 +23,7 @@ class WakeAlarm {
   final bool proofOfAwake;
   final List<int> weekdays;
   final String? ringtonePath;
+  final String ringtoneName;
 
   WakeAlarm copyWith({
     int? hour,
@@ -33,6 +35,8 @@ class WakeAlarm {
     bool? proofOfAwake,
     List<int>? weekdays,
     String? ringtonePath,
+    String? ringtoneName,
+    bool clearRingtone = false,
   }) {
     return WakeAlarm(
       id: id,
@@ -44,7 +48,8 @@ class WakeAlarm {
       sleepyMeProtection: sleepyMeProtection ?? this.sleepyMeProtection,
       proofOfAwake: proofOfAwake ?? this.proofOfAwake,
       weekdays: weekdays ?? this.weekdays,
-      ringtonePath: ringtonePath ?? this.ringtonePath,
+      ringtonePath: clearRingtone ? null : ringtonePath ?? this.ringtonePath,
+      ringtoneName: ringtoneName ?? this.ringtoneName,
     );
   }
 
@@ -59,6 +64,7 @@ class WakeAlarm {
         'proofOfAwake': proofOfAwake,
         'weekdays': weekdays,
         'ringtonePath': ringtonePath,
+        'ringtoneName': ringtoneName,
       };
 
   factory WakeAlarm.fromJson(Map<String, dynamic> json) {
@@ -75,6 +81,8 @@ class WakeAlarm {
       weekdays: rawDays?.map((item) => item as int).toList() ??
           const [1, 2, 3, 4, 5, 6, 7],
       ringtonePath: json['ringtonePath'] as String?,
+      ringtoneName:
+          json['ringtoneName'] as String? ?? 'نغمة المنبّه الافتراضية',
     );
   }
 
