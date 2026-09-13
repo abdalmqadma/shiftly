@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:alarm/alarm.dart';
 import 'package:flutter/material.dart';
+import 'core/theme/app_theme.dart';
 import 'models/shift_exception.dart';
 import 'models/wake_alarm.dart';
 import 'models/work_pattern.dart';
@@ -11,6 +12,7 @@ import 'services/alarm_service.dart';
 import 'services/alarm_storage.dart';
 import 'services/pattern_storage.dart';
 import 'services/shift_exception_storage.dart';
+import 'services/theme_storage.dart';
 
 class ShiftlyApp extends StatefulWidget {
   const ShiftlyApp({super.key});
@@ -24,6 +26,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   WorkPattern? pattern;
   List<WakeAlarm> alarms = const [];
   List<ShiftException> shiftExceptions = const [];
+  ThemeMode themeMode = ThemeMode.system;
   bool editingPattern = false;
   bool loaded = false;
   int? activeAlarmId;
@@ -46,14 +49,22 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
       PatternStorage.load(),
       AlarmStorage.load(),
       ShiftExceptionStorage.load(),
+      ThemeStorage.load(),
     ]);
     if (!mounted) return;
     setState(() {
       pattern = values[0] as WorkPattern?;
       alarms = values[1] as List<WakeAlarm>;
       shiftExceptions = values[2] as List<ShiftException>;
+      themeMode = values[3] as ThemeMode;
       loaded = true;
     });
+  }
+
+  Future<void> _setThemeMode(ThemeMode mode) async {
+    await ThemeStorage.save(mode);
+    if (!mounted) return;
+    setState(() => themeMode = mode);
   }
 
   void _openChallenge(int alarmId) {
@@ -108,6 +119,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
       sleepyMeProtection: draft.sleepyMeProtection,
       proofOfAwake: draft.proofOfAwake,
       ringtonePath: draft.ringtonePath,
+      ringtoneName: draft.ringtoneName,
     );
     final updated = [...alarms, alarm];
     await AlarmStorage.save(updated);
@@ -189,31 +201,15 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
 
   @override
   Widget build(BuildContext context) {
-    const violet = Color(0xFF6D4AFF);
     return MaterialApp(
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Shiftly',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: violet,
-          brightness: Brightness.light,
-          surface: const Color(0xFFFFFBF7),
-        ),
-        scaffoldBackgroundColor: const Color(0xFFFFFBF7),
-        cardTheme: CardThemeData(
-          elevation: 0,
-          color: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        ),
-        navigationBarTheme: const NavigationBarThemeData(
-          backgroundColor: Colors.white,
-          indicatorColor: Color(0xFFEDE8FF),
-          height: 72,
-        ),
-      ),
-      builder: (context, child) => Directionality(textDirection: TextDirection.rtl, child: child!),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeMode,
+      builder: (context, child) =>
+          Directionality(textDirection: TextDirection.rtl, child: child!),
       home: !loaded
           ? const Scaffold(body: Center(child: CircularProgressIndicator()))
           : editingPattern
@@ -225,6 +221,8 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
                   pattern: pattern,
                   alarms: alarms,
                   shiftExceptions: shiftExceptions,
+                  themeMode: themeMode,
+                  onThemeModeChanged: _setThemeMode,
                   onEditPattern: () => setState(() => editingPattern = true),
                   onAddAlarm: _addAlarm,
                   onUpdateAlarm: _updateAlarm,
