@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:alarm/alarm.dart';
-import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../core/theme/app_colors.dart';
 import '../models/shift_exception.dart';
 import '../models/wake_alarm.dart';
 import '../models/work_pattern.dart';
@@ -117,8 +117,8 @@ class AlarmService {
       for (final shift in pattern.shifts) {
         final shiftStart =
             base.add(Duration(minutes: shift.startOffsetMinutes));
-        final alarmTime = shiftStart
-            .subtract(Duration(minutes: pattern.alarmBeforeMinutes));
+        final alarmTime =
+            shiftStart.subtract(Duration(minutes: pattern.alarmBeforeMinutes));
 
         if (alarmTime.isAfter(now)) {
           await _set(
@@ -172,7 +172,7 @@ class AlarmService {
           body: '$title — افتح Shiftly وأكمل التحدي',
           stopButton: null,
           androidStopAlarmOnDismiss: false,
-          iconColor: const Color(0xFF6D4AFF),
+          iconColor: AppColors.primary,
         ),
       ),
     );
