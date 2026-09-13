@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_colors.dart';
 import '../models/work_pattern.dart';
 import '../services/schedule_calculator.dart';
 
@@ -11,11 +12,6 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
-  static const violet = Color(0xFF6D4AFF);
-  static const coral = Color(0xFFFF6B6B);
-  static const mint = Color(0xFF38BFA0);
-  static const amber = Color(0xFFFFB84D);
-
   DateTime month = DateTime(DateTime.now().year, DateTime.now().month);
 
   @override
@@ -24,15 +20,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final first = DateTime(month.year, month.month, 1);
     final days = DateTime(month.year, month.month + 1, 0).day;
     final offset = (first.weekday + 1) % 7;
+    final scheme = Theme.of(context).colorScheme;
 
     const dayNames = ['سبت', 'أحد', 'اثن', 'ثلا', 'أرب', 'خمي', 'جمع'];
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'التقويم',
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
+        title: const Text('التقويم',
+            style: TextStyle(fontWeight: FontWeight.w900)),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -42,13 +37,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
             Container(
               padding: const EdgeInsets.fromLTRB(14, 14, 14, 18),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
+                color: scheme.surface,
                 borderRadius: BorderRadius.circular(26),
                 border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .outlineVariant
-                      .withValues(alpha: .45),
+                  color: scheme.outlineVariant.withValues(alpha: .45),
                 ),
               ),
               child: Column(
@@ -94,7 +86,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 child: Text(
                                   name,
                                   style: TextStyle(
-                                    color: Colors.grey.shade600,
+                                    color: scheme.onSurfaceVariant,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w800,
                                   ),
@@ -121,13 +113,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       itemCount: offset + days,
                       itemBuilder: (_, index) {
                         if (index < offset) return const SizedBox();
-
                         final day = index - offset + 1;
                         final date = DateTime(month.year, month.month, day, 12);
                         final state = calculator.stateAt(date).state;
                         final isToday =
                             DateUtils.isSameDay(date, DateTime.now());
-
                         return _dayCell(
                           day: day,
                           state: state,
@@ -142,16 +132,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
             const SizedBox(height: 16),
             Card(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 child: Wrap(
                   alignment: WrapAlignment.center,
-                  spacing: 22,
+                  spacing: 18,
                   runSpacing: 10,
                   children: [
-                    _legend(coral, 'عمل'),
-                    _legend(amber, 'راحة'),
-                    _legend(mint, 'إجازة'),
+                    _legend(AppColors.currentMarker, 'اليوم'),
+                    _legend(AppColors.shiftWork, 'دوام'),
+                    _legend(AppColors.shiftRest, 'راحة'),
+                    _legend(AppColors.shiftOff, 'إجازة'),
                   ],
                 ),
               ),
@@ -168,12 +158,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
     required VoidCallback onPressed,
   }) {
     return Material(
-      color: const Color(0xFFF3F0FF),
+      color: AppColors.primary.withValues(alpha: .10),
       borderRadius: BorderRadius.circular(14),
       child: IconButton(
         tooltip: tooltip,
         onPressed: onPressed,
-        icon: Icon(icon, color: violet),
+        icon: Icon(icon, color: AppColors.primary),
       ),
     );
   }
@@ -184,26 +174,39 @@ class _CalendarScreenState extends State<CalendarScreen> {
     required bool isToday,
   }) {
     final stateColor = _color(state);
-
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       decoration: BoxDecoration(
         color: stateColor.withValues(alpha: .14),
         borderRadius: BorderRadius.circular(13),
         border: Border.all(
-          color: isToday ? violet : stateColor.withValues(alpha: .20),
-          width: isToday ? 2 : 1,
+          color: isToday
+              ? AppColors.currentMarker
+              : stateColor.withValues(alpha: .25),
+          width: isToday ? 2.4 : 1,
         ),
       ),
-      child: Center(
-        child: Text(
-          '$day',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontSize: 16,
-            fontWeight: isToday ? FontWeight.w900 : FontWeight.w700,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Text(
+            '$day',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 16,
+              fontWeight: isToday ? FontWeight.w900 : FontWeight.w700,
+            ),
           ),
-        ),
+          if (isToday)
+            const Positioned(
+              top: 5,
+              right: 5,
+              child: CircleAvatar(
+                radius: 3.5,
+                backgroundColor: AppColors.currentMarker,
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -217,9 +220,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Color _color(ScheduleState state) => switch (state) {
-        ScheduleState.work => coral,
-        ScheduleState.rest => amber,
-        ScheduleState.off => mint,
+        ScheduleState.work => AppColors.shiftWork,
+        ScheduleState.rest => AppColors.shiftRest,
+        ScheduleState.off => AppColors.shiftOff,
       };
 
   Widget _legend(Color color, String text) => Row(
