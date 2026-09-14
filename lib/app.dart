@@ -51,9 +51,15 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
       ShiftExceptionStorage.load(),
       ThemeStorage.load(),
     ]);
+
+    final loadedPattern = values[0] as WorkPattern?;
+    if (loadedPattern != null) {
+      unawaited(AlarmService.replenishPatternAlarms(loadedPattern));
+    }
+
     if (!mounted) return;
     setState(() {
-      pattern = values[0] as WorkPattern?;
+      pattern = loadedPattern;
       alarms = values[1] as List<WakeAlarm>;
       shiftExceptions = values[2] as List<ShiftException>;
       themeMode = values[3] as ThemeMode;
@@ -83,17 +89,25 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
           onCompleted: () {
             activeAlarmId = null;
             navigator.pop();
-            unawaited(_rescheduleWakeAlarm(alarmId));
+            unawaited(_handleAlarmCompleted(alarmId));
           },
         ),
       ));
     });
   }
 
-  Future<void> _rescheduleWakeAlarm(int alarmId) async {
-    final matches = alarms.where((alarm) => alarm.id == alarmId && alarm.enabled);
-    if (matches.isEmpty) return;
-    await AlarmService.scheduleWakeAlarm(matches.first);
+  Future<void> _handleAlarmCompleted(int alarmId) async {
+    final manualMatches =
+        alarms.where((alarm) => alarm.id == alarmId && alarm.enabled);
+    if (manualMatches.isNotEmpty) {
+      await AlarmService.scheduleWakeAlarm(manualMatches.first);
+      return;
+    }
+
+    if (!AlarmService.isPatternAlarmId(alarmId)) return;
+    final currentPattern = pattern;
+    if (currentPattern == null) return;
+    await AlarmService.replenishPatternAlarms(currentPattern);
   }
 
   Future<void> _savePattern(WorkPattern value) async {
