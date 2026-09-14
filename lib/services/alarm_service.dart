@@ -23,6 +23,8 @@ class AlarmReadiness {
 class AlarmService {
   const AlarmService._();
 
+  static const int _patternQueueSize = 40;
+
   static Future<void> requestPermissions() async {
     if (!Platform.isAndroid) return;
     await Permission.notification.request();
@@ -105,12 +107,19 @@ class AlarmService {
       await Alarm.stop(alarm.id);
     }
 
+    await replenishPatternAlarms(pattern);
+  }
+
+  static Future<void> replenishPatternAlarms(WorkPattern pattern) async {
+    await requestPermissions();
+
+    final existingIds = (await Alarm.getAlarms()).map((alarm) => alarm.id).toSet();
     final now = DateTime.now();
-    var scheduled = 0;
+    var covered = 0;
     var cycleIndex =
         now.difference(pattern.cycleStart).inMinutes ~/ pattern.cycleMinutes - 1;
 
-    while (scheduled < 40) {
+    while (covered < _patternQueueSize) {
       final base = pattern.cycleStart
           .add(Duration(minutes: cycleIndex * pattern.cycleMinutes));
 
@@ -120,16 +129,21 @@ class AlarmService {
         final alarmTime =
             shiftStart.subtract(Duration(minutes: pattern.alarmBeforeMinutes));
 
-        if (alarmTime.isAfter(now)) {
+        if (!alarmTime.isAfter(now)) continue;
+
+        final id = patternAlarmIdFor(alarmTime);
+        if (!existingIds.contains(id)) {
           await _set(
-            id: patternAlarmIdFor(alarmTime),
+            id: id,
             dateTime: alarmTime,
             title: shift.name,
             audioPath: pattern.ringtonePath,
           );
-          scheduled++;
-          if (scheduled == 40) break;
+          existingIds.add(id);
         }
+
+        covered++;
+        if (covered == _patternQueueSize) break;
       }
       cycleIndex++;
     }
