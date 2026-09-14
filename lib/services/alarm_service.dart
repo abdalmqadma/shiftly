@@ -194,4 +194,6 @@ class AlarmService {
 
   static int patternAlarmIdFor(DateTime time) =>
       time.millisecondsSinceEpoch.remainder(900000000) + 10000000;
+
+  static bool isPatternAlarmId(int id) => id >= 10000000 && id < 910000000;
 }
