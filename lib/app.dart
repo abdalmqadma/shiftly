@@ -1,16 +1,24 @@
 import 'dart:async';
+
 import 'package:alarm/alarm.dart';
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
+
 import 'core/theme/app_theme.dart';
+import 'models/prayer_alarm_rule.dart';
 import 'models/shift_exception.dart';
 import 'models/wake_alarm.dart';
 import 'models/work_pattern.dart';
 import 'screens/alarm_challenge_screen.dart';
+import 'screens/alarm_dismiss_screen.dart';
 import 'screens/main_shell.dart';
+import 'screens/prayer_alarm_editor_screen.dart';
 import 'screens/setup_screen.dart';
 import 'services/alarm_service.dart';
 import 'services/alarm_storage.dart';
 import 'services/pattern_storage.dart';
+import 'services/prayer_alarm_service.dart';
+import 'services/prayer_alarm_storage.dart';
 import 'services/shift_exception_storage.dart';
 import 'services/theme_storage.dart';
 
@@ -23,6 +31,8 @@ class ShiftlyApp extends StatefulWidget {
 
 class _ShiftlyAppState extends State<ShiftlyApp> {
   final navigatorKey = GlobalKey<NavigatorState>();
+  final AppLinks appLinks = AppLinks();
+
   WorkPattern? pattern;
   List<WakeAlarm> alarms = const [];
   List<ShiftException> shiftExceptions = const [];
@@ -30,18 +40,92 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   bool editingPattern = false;
   bool loaded = false;
   int? activeAlarmId;
+  Uri? pendingPrayerLink;
   StreamSubscription<dynamic>? ringingSubscription;
+  StreamSubscription<Uri>? linkSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadState();
+    _initLinks();
     ringingSubscription = Alarm.ringing.listen((alarmSet) {
       for (final alarm in alarmSet.alarms) {
-        _openChallenge(alarm.id);
+        unawaited(_handleRingingAlarm(alarm.id));
         break;
       }
     });
+  }
+
+  Future<void> _initLinks() async {
+    try {
+      final initial = await appLinks.getInitialLink();
+      if (initial != null) _handleIncomingUri(initial);
+      linkSubscription = appLinks.uriLinkStream.listen(_handleIncomingUri);
+    } catch (_) {
+      // A malformed external link must never prevent Shiftly from starting.
+    }
+  }
+
+  void _handleIncomingUri(Uri uri) {
+    if (uri.scheme != 'shiftly' || uri.host != 'prayer-alarm') return;
+    pendingPrayerLink = uri;
+    if (loaded) _openPendingPrayerEditor();
+  }
+
+  Future<void> _openPendingPrayerEditor() async {
+    final uri = pendingPrayerLink;
+    final navigator = navigatorKey.currentState;
+    if (uri == null || navigator == null) return;
+
+    final prayer = uri.queryParameters['prayer'];
+    final latitude = double.tryParse(uri.queryParameters['lat'] ?? '');
+    final longitude = double.tryParse(uri.queryParameters['lon'] ?? '');
+    final method = int.tryParse(uri.queryParameters['method'] ?? '');
+    final school = int.tryParse(uri.queryParameters['school'] ?? '') ?? 0;
+    final tune = uri.queryParameters['tune'];
+    const allowed = {'Fajr', 'Sunrise', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'};
+
+    if (prayer == null ||
+        !allowed.contains(prayer) ||
+        latitude == null ||
+        longitude == null ||
+        method == null) {
+      pendingPrayerLink = null;
+      return;
+    }
+
+    final savedRules = await PrayerAlarmStorage.load();
+    PrayerAlarmRule? existing;
+    for (final rule in savedRules) {
+      if (rule.prayer == prayer) {
+        existing = rule;
+        break;
+      }
+    }
+
+    final rule = PrayerAlarmRule(
+      prayer: prayer,
+      latitude: latitude,
+      longitude: longitude,
+      method: method,
+      school: school,
+      tune: tune,
+      offsetMinutes: existing?.offsetMinutes ?? 0,
+      challengeEnabled: existing?.challengeEnabled ?? true,
+      enabled: existing?.enabled ?? true,
+      ringtonePath: existing?.ringtonePath,
+      ringtoneName: existing?.ringtoneName,
+    );
+
+    pendingPrayerLink = null;
+    if (!mounted) return;
+    await navigator.push<bool>(
+      MaterialPageRoute<bool>(
+        fullscreenDialog: true,
+        builder: (_) => PrayerAlarmEditorScreen(rule: rule),
+      ),
+    );
   }
 
   Future<void> _loadState() async {
@@ -56,6 +140,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     if (loadedPattern != null) {
       unawaited(AlarmService.replenishPatternAlarms(loadedPattern));
     }
+    unawaited(PrayerAlarmService.replenishAll());
 
     if (!mounted) return;
     setState(() {
@@ -65,12 +150,59 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
       themeMode = values[3] as ThemeMode;
       loaded = true;
     });
+
+    if (pendingPrayerLink != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_openPendingPrayerEditor());
+      });
+    }
   }
 
   Future<void> _setThemeMode(ThemeMode mode) async {
     await ThemeStorage.save(mode);
     if (!mounted) return;
     setState(() => themeMode = mode);
+  }
+
+  Future<void> _handleRingingAlarm(int alarmId) async {
+    if (PrayerAlarmService.isPrayerAlarmId(alarmId)) {
+      final rules = await PrayerAlarmStorage.load();
+      PrayerAlarmRule? rule;
+      for (final item in rules) {
+        if (item.alarmId == alarmId) {
+          rule = item;
+          break;
+        }
+      }
+      if (rule != null && !rule.challengeEnabled) {
+        _openSimpleDismiss(alarmId);
+        return;
+      }
+    }
+    _openChallenge(alarmId);
+  }
+
+  void _openSimpleDismiss(int alarmId) {
+    if (activeAlarmId == alarmId) return;
+    activeAlarmId = alarmId;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final navigator = navigatorKey.currentState;
+      if (navigator == null) {
+        activeAlarmId = null;
+        return;
+      }
+      navigator.push(MaterialPageRoute<void>(
+        fullscreenDialog: true,
+        builder: (_) => AlarmDismissScreen(
+          alarmId: alarmId,
+          onCompleted: () {
+            activeAlarmId = null;
+            navigator.pop();
+            unawaited(_handleAlarmCompleted(alarmId));
+          },
+        ),
+      ));
+    });
   }
 
   void _openChallenge(int alarmId) {
@@ -97,6 +229,17 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   }
 
   Future<void> _handleAlarmCompleted(int alarmId) async {
+    if (PrayerAlarmService.isPrayerAlarmId(alarmId)) {
+      final rules = await PrayerAlarmStorage.load();
+      for (final rule in rules) {
+        if (rule.alarmId == alarmId && rule.enabled) {
+          await PrayerAlarmService.scheduleNext(rule);
+          return;
+        }
+      }
+      return;
+    }
+
     final manualMatches =
         alarms.where((alarm) => alarm.id == alarmId && alarm.enabled);
     if (manualMatches.isNotEmpty) {
@@ -210,6 +353,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   @override
   void dispose() {
     ringingSubscription?.cancel();
+    linkSubscription?.cancel();
     super.dispose();
   }
 
