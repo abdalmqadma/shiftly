@@ -57,6 +57,22 @@ class AlarmService {
     );
   }
 
+  static Future<void> schedulePrayerAlarm({
+    required int id,
+    required DateTime dateTime,
+    required String title,
+    String? audioPath,
+  }) async {
+    if (!dateTime.isAfter(DateTime.now())) return;
+    await requestPermissions();
+    await _set(
+      id: id,
+      dateTime: dateTime,
+      title: title,
+      audioPath: audioPath,
+    );
+  }
+
   static Future<void> stopWakeAlarm(int id) => Alarm.stop(id);
 
   static Future<void> rescheduleOneTimeShiftAlarm({
@@ -102,6 +118,9 @@ class AlarmService {
     final existing = await Alarm.getAlarms();
     for (final alarm in existing) {
       if (wakeIds.contains(alarm.id) || exceptionIds.contains(alarm.id)) {
+        continue;
+      }
+      if (alarm.id >= 920000001 && alarm.id <= 920000006) {
         continue;
       }
       await Alarm.stop(alarm.id);
