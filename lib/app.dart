@@ -13,12 +13,14 @@ import 'screens/alarm_challenge_screen.dart';
 import 'screens/alarm_dismiss_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/prayer_alarm_editor_screen.dart';
+import 'screens/prayer_sync_result_screen.dart';
 import 'screens/setup_screen.dart';
 import 'services/alarm_service.dart';
 import 'services/alarm_storage.dart';
 import 'services/pattern_storage.dart';
 import 'services/prayer_alarm_service.dart';
 import 'services/prayer_alarm_storage.dart';
+import 'services/prayer_sync_service.dart';
 import 'services/shift_exception_storage.dart';
 import 'services/theme_storage.dart';
 
@@ -68,15 +70,38 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   }
 
   void _handleIncomingUri(Uri uri) {
-    if (uri.scheme != 'shiftly' || uri.host != 'prayer-alarm') return;
+    if (uri.scheme != 'shiftly') return;
+    if (uri.host != 'prayer-alarm' && uri.host != 'prayer-sync') return;
     pendingPrayerLink = uri;
-    if (loaded) _openPendingPrayerEditor();
+    if (loaded) unawaited(_openPendingPrayerLink());
   }
 
-  Future<void> _openPendingPrayerEditor() async {
+  Future<void> _openPendingPrayerLink() async {
     final uri = pendingPrayerLink;
     final navigator = navigatorKey.currentState;
     if (uri == null || navigator == null) return;
+
+    if (uri.host == 'prayer-sync') {
+      pendingPrayerLink = null;
+      try {
+        final rules = await PrayerSyncService.apply(uri);
+        if (!mounted) return;
+        await navigator.push<void>(
+          MaterialPageRoute<void>(
+            fullscreenDialog: true,
+            builder: (_) => PrayerSyncResultScreen(rules: rules),
+          ),
+        );
+      } catch (error) {
+        final context = navigatorKey.currentContext;
+        if (context != null && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('تعذر مزامنة منبهات الصلاة: $error')),
+          );
+        }
+      }
+      return;
+    }
 
     final prayer = uri.queryParameters['prayer'];
     final latitude = double.tryParse(uri.queryParameters['lat'] ?? '');
@@ -153,7 +178,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
 
     if (pendingPrayerLink != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        unawaited(_openPendingPrayerEditor());
+        unawaited(_openPendingPrayerLink());
       });
     }
   }
