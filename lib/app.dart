@@ -351,7 +351,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     setState(() => alarms = updated);
   }
 
-  Future<void> _editTodayShiftAlarm({
+  Future<bool> _editTodayShiftAlarm({
     required int shiftIndex,
     required int? customAlarmIndex,
     required int newAlarmOffsetMinutes,
@@ -362,51 +362,69 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
         shiftIndex >= current.shifts.length ||
         newAlarmOffsetMinutes < 0 ||
         newAlarmOffsetMinutes >= current.dutyMinutes) {
-      return;
+      return false;
     }
 
     final shifts = [...current.shifts];
+    var alarmBeforeMinutes = current.alarmBeforeMinutes;
     final selected = shifts[shiftIndex];
+
     if (customAlarmIndex == null) {
-      // Editing a fixed reminder converts this shift to a custom rule,
-      // so the selected time is preserved for every future cycle.
-      shifts[shiftIndex] = WorkShift(
-        name: selected.name,
-        startOffsetMinutes: selected.startOffsetMinutes,
-        endOffsetMinutes: selected.endOffsetMinutes,
-        useCustomAlarms: true,
-        customAlarmOffsetsMinutes: [newAlarmOffsetMinutes],
-      );
+      if (newAlarmOffsetMinutes > selected.startOffsetMinutes) return false;
+      // The fixed lead-time belongs to the whole pattern, so changing it
+      // updates every fixed shift in every repetition of the cycle.
+      alarmBeforeMinutes =
+          selected.startOffsetMinutes - newAlarmOffsetMinutes;
     } else {
       if (customAlarmIndex < 0 ||
           customAlarmIndex >= selected.customAlarmOffsetsMinutes.length) {
-        return;
+        return false;
       }
-      final offsets = [...selected.customAlarmOffsetsMinutes];
-      offsets[customAlarmIndex] = newAlarmOffsetMinutes;
-      offsets.sort();
-      shifts[shiftIndex] = WorkShift(
-        name: selected.name,
-        startOffsetMinutes: selected.startOffsetMinutes,
-        endOffsetMinutes: selected.endOffsetMinutes,
-        useCustomAlarms: true,
-        customAlarmOffsetsMinutes: offsets,
-      );
+
+      final oldOffset =
+          selected.customAlarmOffsetsMinutes[customAlarmIndex];
+      final delta = newAlarmOffsetMinutes - oldOffset;
+
+      // The same alarm slot is treated as a counterpart across cycle days.
+      // Apply the time change (delta) to every shift that has this slot.
+      for (var index = 0; index < shifts.length; index++) {
+        final shift = shifts[index];
+        if (!shift.useCustomAlarms ||
+            customAlarmIndex >= shift.customAlarmOffsetsMinutes.length) {
+          continue;
+        }
+        final offsets = [...shift.customAlarmOffsetsMinutes];
+        final changed = offsets[customAlarmIndex] + delta;
+        if (changed < shift.startOffsetMinutes ||
+            changed >= shift.endOffsetMinutes) {
+          return false;
+        }
+        offsets[customAlarmIndex] = changed;
+        offsets.sort();
+        shifts[index] = WorkShift(
+          name: shift.name,
+          startOffsetMinutes: shift.startOffsetMinutes,
+          endOffsetMinutes: shift.endOffsetMinutes,
+          useCustomAlarms: true,
+          customAlarmOffsetsMinutes: offsets,
+        );
+      }
     }
 
     final updated = WorkPattern(
       cycleStart: current.cycleStart,
       dutyMinutes: current.dutyMinutes,
       offMinutes: current.offMinutes,
-      alarmBeforeMinutes: current.alarmBeforeMinutes,
+      alarmBeforeMinutes: alarmBeforeMinutes,
       shifts: shifts,
       ringtonePath: current.ringtonePath,
       ringtoneName: current.ringtoneName,
     );
     await PatternStorage.save(updated);
     await AlarmService.replacePatternAlarms(updated);
-    if (!mounted) return;
+    if (!mounted) return false;
     setState(() => pattern = updated);
+    return true;
   }
 
   Future<void> _addShiftException({
