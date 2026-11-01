@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../models/wake_alarm.dart';
 import '../models/work_pattern.dart';
-import '../services/alarm_service.dart';
 import 'alarm_editor_screen.dart';
 
 class WakeAlarmsScreen extends StatelessWidget {
@@ -101,7 +100,6 @@ class WakeAlarmsScreen extends StatelessWidget {
         final alarmTime =
             cycleBase.add(Duration(minutes: alarmOffsets[alarmIndex]));
         result.add(_TodayShiftAlarm(
-          id: AlarmService.patternAlarmIdFor(alarmTime),
           title: shift.name,
           shiftStart: shiftStart,
           alarmTime: alarmTime,
@@ -394,7 +392,6 @@ class WakeAlarmsScreen extends StatelessWidget {
 
 class _TodayShiftAlarm {
   const _TodayShiftAlarm({
-    required this.id,
     required this.title,
     required this.shiftStart,
     required this.alarmTime,
@@ -404,7 +401,6 @@ class _TodayShiftAlarm {
     required this.passed,
   });
 
-  final int id;
   final String title;
   final DateTime shiftStart;
   final DateTime alarmTime;
