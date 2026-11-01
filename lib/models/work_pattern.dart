@@ -5,6 +5,7 @@ class WorkShift {
     required this.endOffsetMinutes,
     this.useCustomAlarms = false,
     this.customAlarmOffsetsMinutes = const [],
+    this.fixedAlarmBeforeMinutes,
   });
 
   final String name;
@@ -18,6 +19,9 @@ class WorkShift {
   /// Alarm times as minute offsets from the beginning of the work cycle.
   /// They are repeated whenever this shift occurs in a later cycle.
   final List<int> customAlarmOffsetsMinutes;
+
+  /// Optional per-shift override for the pattern-wide fixed reminder lead time.
+  final int? fixedAlarmBeforeMinutes;
 }
 
 class WorkPattern {
