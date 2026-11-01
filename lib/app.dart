@@ -43,6 +43,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   bool loaded = false;
   int? activeAlarmId;
   final List<int> pendingRingingAlarmIds = [];
+  bool resolvingRingingAlarm = false;
   Uri? pendingPrayerLink;
   StreamSubscription<dynamic>? ringingSubscription;
   StreamSubscription<Uri>? linkSubscription;
@@ -199,7 +200,12 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   }
 
   Future<void> _showNextRingingAlarm() async {
-    if (activeAlarmId != null || pendingRingingAlarmIds.isEmpty) return;
+    if (activeAlarmId != null ||
+        resolvingRingingAlarm ||
+        pendingRingingAlarmIds.isEmpty) {
+      return;
+    }
+    resolvingRingingAlarm = true;
     final alarmId = pendingRingingAlarmIds.removeAt(0);
     if (PrayerAlarmService.isPrayerAlarmId(alarmId)) {
       final rules = await PrayerAlarmStorage.load();
@@ -211,10 +217,12 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
         }
       }
       if (rule != null && !rule.challengeEnabled) {
+        resolvingRingingAlarm = false;
         _openSimpleDismiss(alarmId);
         return;
       }
     }
+    resolvingRingingAlarm = false;
     _openChallenge(alarmId);
   }
 
@@ -259,6 +267,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
             activeAlarmId = null;
             navigator.pop();
             unawaited(_handleAlarmCompleted(alarmId));
+            unawaited(_showNextRingingAlarm());
           },
         ),
       ));
