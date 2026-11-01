@@ -151,7 +151,10 @@ class AlarmService {
               )
             : [
                 shiftStart.subtract(
-                  Duration(minutes: pattern.alarmBeforeMinutes),
+                  Duration(
+                    minutes: shift.fixedAlarmBeforeMinutes ??
+                        pattern.alarmBeforeMinutes,
+                  ),
                 ),
               ];
 
@@ -205,6 +208,8 @@ class AlarmService {
         androidFullScreenIntent: true,
         androidStopAlarmOnTermination: false,
         androidStaleAfter: const Duration(minutes: 15),
+        allowAlarmOverlap: false,
+        allowSameSecondScheduling: true,
         volumeSettings: VolumeSettings.fade(
           volume: 1,
           fadeDuration: const Duration(seconds: 12),
@@ -221,8 +226,14 @@ class AlarmService {
     );
   }
 
+  // Keep pattern alarms in a dedicated positive-int range, separate from
+  // manual, prayer, exception, and test alarms. Use epoch minutes rather
+  // than milliseconds so the ID cycle is centuries long, not ~10 days.
   static int patternAlarmIdFor(DateTime time) =>
-      time.millisecondsSinceEpoch.remainder(900000000) + 10000000;
+      2000000000 +
+      (time.millisecondsSinceEpoch ~/ Duration.millisecondsPerMinute)
+          .remainder(147483647);
 
-  static bool isPatternAlarmId(int id) => id >= 10000000 && id < 910000000;
+  static bool isPatternAlarmId(int id) =>
+      id >= 2000000000 && id <= 2147483646;
 }
