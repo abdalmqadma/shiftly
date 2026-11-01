@@ -422,7 +422,7 @@ class _SetupScreenState extends State<SetupScreen> {
         Expanded(
           flex: 2,
           child: DropdownButtonFormField<int>(
-            initialValue: alarm.day.clamp(1, dutyDays),
+            initialValue: alarm.day.clamp(1, dutyDays).toInt(),
             decoration: const InputDecoration(labelText: 'اليوم'),
             items: List.generate(
               dutyDays,
