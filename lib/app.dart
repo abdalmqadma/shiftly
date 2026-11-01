@@ -164,7 +164,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
 
     final loadedPattern = values[0] as WorkPattern?;
     if (loadedPattern != null) {
-      unawaited(AlarmService.replenishPatternAlarms(loadedPattern));
+      unawaited(AlarmService.replacePatternAlarms(loadedPattern));
     }
     unawaited(PrayerAlarmService.replenishAll());
 
