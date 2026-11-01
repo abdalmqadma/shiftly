@@ -132,6 +132,12 @@ class AlarmService {
   static Future<void> replenishPatternAlarms(WorkPattern pattern) async {
     await requestPermissions();
 
+    final hasAnyPatternAlarms = pattern.shifts.any((shift) =>
+        shift.useCustomAlarms
+            ? shift.customAlarmOffsetsMinutes.isNotEmpty
+            : shift.fixedAlarmEnabled);
+    if (!hasAnyPatternAlarms) return;
+
     final existingIds = (await Alarm.getAlarms()).map((alarm) => alarm.id).toSet();
     final now = DateTime.now();
     var covered = 0;
@@ -149,14 +155,16 @@ class AlarmService {
             ? shift.customAlarmOffsetsMinutes.map(
                 (offset) => base.add(Duration(minutes: offset)),
               )
-            : [
-                shiftStart.subtract(
-                  Duration(
-                    minutes: shift.fixedAlarmBeforeMinutes ??
-                        pattern.alarmBeforeMinutes,
-                  ),
-                ),
-              ];
+            : shift.fixedAlarmEnabled
+                ? [
+                    shiftStart.subtract(
+                      Duration(
+                        minutes: shift.fixedAlarmBeforeMinutes ??
+                            pattern.alarmBeforeMinutes,
+                      ),
+                    ),
+                  ]
+                : <DateTime>[];
 
         for (final alarmTime in alarmTimes) {
           if (!alarmTime.isAfter(now)) continue;

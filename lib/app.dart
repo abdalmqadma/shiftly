@@ -363,12 +363,13 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     required int shiftIndex,
     required int? customAlarmIndex,
     required int newAlarmOffsetMinutes,
+    bool? deleteAlarm,
   }) async {
     final current = pattern;
     if (current == null ||
         shiftIndex < 0 ||
         shiftIndex >= current.shifts.length ||
-        newAlarmOffsetMinutes >= current.dutyMinutes) {
+        (deleteAlarm != true && newAlarmOffsetMinutes >= current.dutyMinutes)) {
       return false;
     }
 
@@ -376,18 +377,31 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     final selected = shifts[shiftIndex];
 
     if (customAlarmIndex == null) {
-      if (newAlarmOffsetMinutes > selected.startOffsetMinutes) return false;
-      // A fixed reminder can be edited independently for this shift;
-      // the override is persisted and repeats in every future cycle.
-      shifts[shiftIndex] = WorkShift(
-        name: selected.name,
-        startOffsetMinutes: selected.startOffsetMinutes,
-        endOffsetMinutes: selected.endOffsetMinutes,
-        useCustomAlarms: false,
-        customAlarmOffsetsMinutes: selected.customAlarmOffsetsMinutes,
-        fixedAlarmBeforeMinutes:
-            selected.startOffsetMinutes - newAlarmOffsetMinutes,
-      );
+      if (deleteAlarm == true) {
+        shifts[shiftIndex] = WorkShift(
+          name: selected.name,
+          startOffsetMinutes: selected.startOffsetMinutes,
+          endOffsetMinutes: selected.endOffsetMinutes,
+          useCustomAlarms: false,
+          customAlarmOffsetsMinutes: selected.customAlarmOffsetsMinutes,
+          fixedAlarmBeforeMinutes: selected.fixedAlarmBeforeMinutes,
+          fixedAlarmEnabled: false,
+        );
+      } else {
+        // The edited time is the reminder's actual fire time, not the
+        // shift start. Negative cycle offsets are valid pre-shift alarms.
+        if (newAlarmOffsetMinutes >= selected.startOffsetMinutes) return false;
+        shifts[shiftIndex] = WorkShift(
+          name: selected.name,
+          startOffsetMinutes: selected.startOffsetMinutes,
+          endOffsetMinutes: selected.endOffsetMinutes,
+          useCustomAlarms: false,
+          customAlarmOffsetsMinutes: selected.customAlarmOffsetsMinutes,
+          fixedAlarmBeforeMinutes:
+              selected.startOffsetMinutes - newAlarmOffsetMinutes,
+          fixedAlarmEnabled: true,
+        );
+      }
     } else {
       if (customAlarmIndex < 0 ||
           customAlarmIndex >= selected.customAlarmOffsetsMinutes.length) {
@@ -399,7 +413,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
       final delta = newAlarmOffsetMinutes - oldOffset;
 
       // The same alarm slot is treated as a counterpart across cycle days.
-      // Apply the time change (delta) to every shift that has this slot.
+      // Delete or edit that slot in each matching shift.
       for (var index = 0; index < shifts.length; index++) {
         final shift = shifts[index];
         if (!shift.useCustomAlarms ||
@@ -407,13 +421,14 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
           continue;
         }
         final offsets = [...shift.customAlarmOffsetsMinutes];
-        final changed = offsets[customAlarmIndex] + delta;
-        if (changed < shift.startOffsetMinutes ||
-            changed >= shift.endOffsetMinutes) {
-          return false;
+        if (deleteAlarm == true) {
+          offsets.removeAt(customAlarmIndex);
+        } else {
+          final changed = offsets[customAlarmIndex] + delta;
+          if (changed >= shift.endOffsetMinutes) return false;
+          offsets[customAlarmIndex] = changed;
+          offsets.sort();
         }
-        offsets[customAlarmIndex] = changed;
-        offsets.sort();
         shifts[index] = WorkShift(
           name: shift.name,
           startOffsetMinutes: shift.startOffsetMinutes,
@@ -421,6 +436,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
           useCustomAlarms: true,
           customAlarmOffsetsMinutes: offsets,
           fixedAlarmBeforeMinutes: shift.fixedAlarmBeforeMinutes,
+          fixedAlarmEnabled: shift.fixedAlarmEnabled,
         );
       }
     }

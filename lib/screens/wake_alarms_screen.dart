@@ -26,6 +26,7 @@ class WakeAlarmsScreen extends StatelessWidget {
     required int shiftIndex,
     required int? customAlarmIndex,
     required int newAlarmOffsetMinutes,
+    bool? deleteAlarm,
   }) onEditTodayShiftAlarm;
 
   @override
@@ -96,6 +97,7 @@ class WakeAlarmsScreen extends StatelessWidget {
 
     for (var shiftIndex = 0; shiftIndex < p.shifts.length; shiftIndex++) {
       final shift = p.shifts[shiftIndex];
+      if (!shift.useCustomAlarms && !shift.fixedAlarmEnabled) continue;
       final shiftStart =
           cycleBase.add(Duration(minutes: shift.startOffsetMinutes));
       final alarmOffsets = shift.useCustomAlarms
@@ -162,9 +164,14 @@ class WakeAlarmsScreen extends StatelessWidget {
           ),
         ),
         IconButton(
-          tooltip: 'تعديل تنبيه اليوم',
+          tooltip: 'تعديل وقت التنبيه',
           onPressed: () => _editShiftAlarm(context, item),
           icon: const Icon(Icons.edit_rounded, color: AppColors.primary),
+        ),
+        IconButton(
+          tooltip: 'إلغاء هذا التنبيه',
+          onPressed: () => _deleteShiftAlarm(context, item),
+          icon: const Icon(Icons.delete_outline_rounded, color: AppColors.danger),
         ),
       ]),
     );
@@ -352,6 +359,36 @@ class WakeAlarmsScreen extends StatelessWidget {
               : 'الوقت المختار خارج مدة الشفت أو الدورة'),
         ),
       );
+    }
+  }
+
+  Future<void> _deleteShiftAlarm(BuildContext context, _TodayShiftAlarm item) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('إلغاء تنبيه الشفت؟'),
+        content: const Text('سيتم إلغاء هذا التنبيه من إعدادات الدورة، ويمكنك إضافة تنبيه جديد لاحقًا.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('رجوع')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('إلغاء التنبيه'),
+          ),
+        ],
+      ),
+    ) ?? false;
+    if (!confirmed) return;
+    final saved = await onEditTodayShiftAlarm(
+      shiftIndex: item.shiftIndex,
+      customAlarmIndex: item.customAlarmIndex,
+      newAlarmOffsetMinutes: 0,
+      deleteAlarm: true,
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(saved ? 'تم إلغاء التنبيه' : 'تعذر إلغاء التنبيه'),
+      ));
     }
   }
 
