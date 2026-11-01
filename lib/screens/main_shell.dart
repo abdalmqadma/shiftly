@@ -41,6 +41,7 @@ class MainShell extends StatefulWidget {
     required int shiftIndex,
     required int? customAlarmIndex,
     required int newAlarmOffsetMinutes,
+    bool? deleteAlarm,
   }) onEditTodayShiftAlarm;
   final Future<void> Function({
     required String title,
