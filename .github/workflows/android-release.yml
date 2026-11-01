@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -32,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Normalize Dart formatting
+      - name: Format Dart source
         run: dart format lib test
 
       - name: Analyze
@@ -41,16 +42,13 @@ jobs:
       - name: Test
         run: flutter test
 
-      - name: Build split release APKs
-        run: flutter build apk --release --split-per-abi
+      - name: Build arm64 release APK
+        run: flutter build apk --release --target-platform android-arm64
 
-      - name: Prepare release files
-        run: |
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk shiftly-build-${GITHUB_RUN_NUMBER}-android-arm64-v8a.apk
-          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk shiftly-build-${GITHUB_RUN_NUMBER}-android-armeabi-v7a.apk
-          cp build/app/outputs/flutter-apk/app-x86_64-release.apk shiftly-build-${GITHUB_RUN_NUMBER}-android-x86_64.apk
+      - name: Prepare release file
+        run: cp build/app/outputs/flutter-apk/app-release.apk shiftly-build-${GITHUB_RUN_NUMBER}-android-arm64-v8a.apk
 
-      - name: Publish split APKs to GitHub Release
+      - name: Publish arm64 APK to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
@@ -58,15 +56,9 @@ jobs:
           name: Shiftly Build #${{ github.run_number }}
           files: |
             shiftly-build-${{ github.run_number }}-android-arm64-v8a.apk
-            shiftly-build-${{ github.run_number }}-android-armeabi-v7a.apk
-            shiftly-build-${{ github.run_number }}-android-x86_64.apk
           generate_release_notes: true
           body: |
             Automated Android release from main.
 
-            ## Android downloads
-            - **arm64-v8a**: Most modern Android phones and the recommended build for 64-bit ARM devices.
-            - **armeabi-v7a**: Older 32-bit ARM Android devices.
-            - **x86_64**: Android emulators and x86_64 devices.
-
-            Download only the APK that matches your device architecture.
+            ## Android download
+            - **arm64-v8a**: The only published build, for modern 64-bit ARM Android devices.
