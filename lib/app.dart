@@ -42,6 +42,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   bool editingPattern = false;
   bool loaded = false;
   int? activeAlarmId;
+  final List<int> pendingRingingAlarmIds = [];
   Uri? pendingPrayerLink;
   StreamSubscription<dynamic>? ringingSubscription;
   StreamSubscription<Uri>? linkSubscription;
@@ -53,8 +54,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     _initLinks();
     ringingSubscription = Alarm.ringing.listen((alarmSet) {
       for (final alarm in alarmSet.alarms) {
-        unawaited(_handleRingingAlarm(alarm.id));
-        break;
+        _queueRingingAlarm(alarm.id);
       }
     });
   }
@@ -189,7 +189,18 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     setState(() => themeMode = mode);
   }
 
-  Future<void> _handleRingingAlarm(int alarmId) async {
+  void _queueRingingAlarm(int alarmId) {
+    if (activeAlarmId == alarmId ||
+        pendingRingingAlarmIds.contains(alarmId)) {
+      return;
+    }
+    pendingRingingAlarmIds.add(alarmId);
+    unawaited(_showNextRingingAlarm());
+  }
+
+  Future<void> _showNextRingingAlarm() async {
+    if (activeAlarmId != null || pendingRingingAlarmIds.isEmpty) return;
+    final alarmId = pendingRingingAlarmIds.removeAt(0);
     if (PrayerAlarmService.isPrayerAlarmId(alarmId)) {
       final rules = await PrayerAlarmStorage.load();
       PrayerAlarmRule? rule;
@@ -224,6 +235,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
             activeAlarmId = null;
             navigator.pop();
             unawaited(_handleAlarmCompleted(alarmId));
+            unawaited(_showNextRingingAlarm());
           },
         ),
       ));
