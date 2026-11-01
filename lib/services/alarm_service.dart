@@ -149,14 +149,16 @@ class AlarmService {
             ? shift.customAlarmOffsetsMinutes.map(
                 (offset) => base.add(Duration(minutes: offset)),
               )
-            : [
-                shiftStart.subtract(
-                  Duration(
-                    minutes: shift.fixedAlarmBeforeMinutes ??
-                        pattern.alarmBeforeMinutes,
-                  ),
-                ),
-              ];
+            : shift.fixedAlarmEnabled
+                ? [
+                    shiftStart.subtract(
+                      Duration(
+                        minutes: shift.fixedAlarmBeforeMinutes ??
+                            pattern.alarmBeforeMinutes,
+                      ),
+                    ),
+                  ]
+                : <DateTime>[];
 
         for (final alarmTime in alarmTimes) {
           if (!alarmTime.isAfter(now)) continue;
