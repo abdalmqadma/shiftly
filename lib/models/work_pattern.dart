@@ -6,6 +6,7 @@ class WorkShift {
     this.useCustomAlarms = false,
     this.customAlarmOffsetsMinutes = const [],
     this.fixedAlarmBeforeMinutes,
+    this.fixedAlarmEnabled = true,
   });
 
   final String name;
@@ -22,6 +23,9 @@ class WorkShift {
 
   /// Optional per-shift override for the pattern-wide fixed reminder lead time.
   final int? fixedAlarmBeforeMinutes;
+
+  /// Whether the single pre-shift reminder is enabled for this shift.
+  final bool fixedAlarmEnabled;
 }
 
 class WorkPattern {
