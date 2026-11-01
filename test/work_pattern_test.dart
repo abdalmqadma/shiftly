@@ -40,7 +40,37 @@ void main() {
     expect(restored.shifts[0].useCustomAlarms, isTrue);
     expect(restored.shifts[0].customAlarmOffsetsMinutes, [90, 240, 480]);
     expect(restored.shifts[1].fixedAlarmBeforeMinutes, 45);
+    expect(restored.shifts[1].fixedAlarmEnabled, isTrue);
     expect(restored.alarmBeforeMinutes, 30);
+  });
+
+  test('disabled fixed reminders and empty custom alarm lists survive storage', () async {
+    final original = WorkPattern(
+      cycleStart: DateTime(2026, 11, 1, 7),
+      dutyMinutes: 72 * 60,
+      offMinutes: 24 * 60,
+      alarmBeforeMinutes: 30,
+      shifts: const [
+        WorkShift(
+          name: 'No reminder',
+          startOffsetMinutes: 60,
+          endOffsetMinutes: 600,
+          fixedAlarmEnabled: false,
+        ),
+        WorkShift(
+          name: 'No custom reminders',
+          startOffsetMinutes: 720,
+          endOffsetMinutes: 1200,
+          useCustomAlarms: true,
+          customAlarmOffsetsMinutes: [],
+        ),
+      ],
+    );
+    await PatternStorage.save(original);
+    final restored = await PatternStorage.load();
+    expect(restored!.shifts[0].fixedAlarmEnabled, isFalse);
+    expect(restored.shifts[1].useCustomAlarms, isTrue);
+    expect(restored.shifts[1].customAlarmOffsetsMinutes, isEmpty);
   });
 
   test('pattern alarm IDs stay in a dedicated range and do not repeat after 10 days', () {
