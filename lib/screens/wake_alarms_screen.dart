@@ -26,7 +26,7 @@ class WakeAlarmsScreen extends StatelessWidget {
     required int shiftIndex,
     required int? customAlarmIndex,
     required int newAlarmOffsetMinutes,
-    bool deleteAlarm,
+    bool? deleteAlarm,
   }) onEditTodayShiftAlarm;
 
   @override
