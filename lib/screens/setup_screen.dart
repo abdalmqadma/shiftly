@@ -84,10 +84,33 @@ class _SetupScreenState extends State<SetupScreen> {
   }
 
   void _addCustomAlarm(_ShiftDraft draft) {
+    final cycleStart = DateTime(
+      _startDate.year,
+      _startDate.month,
+      _startDate.day,
+      _startTime.hour,
+      _startTime.minute,
+    );
+    final shiftStart =
+        cycleStart.add(Duration(minutes: _offset(draft.startDay, draft.start)));
+    final shiftEnd =
+        cycleStart.add(Duration(minutes: _offset(draft.endDay, draft.end)));
+    final lastAlarm = draft.customAlarms.isEmpty
+        ? shiftStart
+        : draft.customAlarms
+            .map((alarm) => cycleStart.add(
+                Duration(minutes: _offset(alarm.day, alarm.time))))
+            .reduce((a, b) => a.isAfter(b) ? a : b);
+    final proposed = lastAlarm.add(const Duration(minutes: 30));
+    final chosen = proposed.isBefore(shiftEnd) ? proposed : shiftStart;
+    final cycleMidnight =
+        DateTime(cycleStart.year, cycleStart.month, cycleStart.day);
+    final day = chosen.difference(cycleMidnight).inDays + 1;
+
     setState(() {
       draft.customAlarms.add(_ShiftAlarmDraft(
-        day: draft.startDay,
-        time: draft.start,
+        day: day,
+        time: TimeOfDay(hour: chosen.hour, minute: chosen.minute),
       ));
       draft.useCustomAlarms = true;
     });
