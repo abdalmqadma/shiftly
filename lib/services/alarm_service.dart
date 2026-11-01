@@ -231,7 +231,7 @@ class AlarmService {
   // than milliseconds so the ID cycle is centuries long, not ~10 days.
   static int patternAlarmIdFor(DateTime time) =>
       2000000000 +
-      (time.millisecondsSinceEpoch ~/ Duration.millisecondsPerMinute)
+      (time.millisecondsSinceEpoch ~/ 60000)
           .remainder(147483647);
 
   static bool isPatternAlarmId(int id) =>
