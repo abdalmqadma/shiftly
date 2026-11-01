@@ -205,25 +205,31 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
         pendingRingingAlarmIds.isEmpty) {
       return;
     }
+
     resolvingRingingAlarm = true;
     final alarmId = pendingRingingAlarmIds.removeAt(0);
-    if (PrayerAlarmService.isPrayerAlarmId(alarmId)) {
-      final rules = await PrayerAlarmStorage.load();
-      PrayerAlarmRule? rule;
-      for (final item in rules) {
-        if (item.alarmId == alarmId) {
-          rule = item;
-          break;
+    var useSimpleDismiss = false;
+    try {
+      if (PrayerAlarmService.isPrayerAlarmId(alarmId)) {
+        final rules = await PrayerAlarmStorage.load();
+        for (final rule in rules) {
+          if (rule.alarmId == alarmId) {
+            useSimpleDismiss = !rule.challengeEnabled;
+            break;
+          }
         }
       }
-      if (rule != null && !rule.challengeEnabled) {
-        resolvingRingingAlarm = false;
-        _openSimpleDismiss(alarmId);
-        return;
-      }
+    } catch (_) {
+      // If prayer settings cannot be read, still show the full challenge.
+    } finally {
+      resolvingRingingAlarm = false;
     }
-    resolvingRingingAlarm = false;
-    _openChallenge(alarmId);
+
+    if (useSimpleDismiss) {
+      _openSimpleDismiss(alarmId);
+    } else {
+      _openChallenge(alarmId);
+    }
   }
 
   void _openSimpleDismiss(int alarmId) {
@@ -233,6 +239,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
       final navigator = navigatorKey.currentState;
       if (navigator == null) {
         activeAlarmId = null;
+        unawaited(_showNextRingingAlarm());
         return;
       }
       navigator.push(MaterialPageRoute<void>(
