@@ -331,18 +331,61 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   }
 
   Future<void> _editTodayShiftAlarm({
-    required int alarmId,
-    required String title,
-    required DateTime oldTime,
-    required DateTime newTime,
+    required int shiftIndex,
+    required int? customAlarmIndex,
+    required int newAlarmOffsetMinutes,
   }) async {
-    await AlarmService.rescheduleOneTimeShiftAlarm(
-      id: alarmId,
-      title: title,
-      oldTime: oldTime,
-      newTime: newTime,
-      audioPath: pattern?.ringtonePath,
+    final current = pattern;
+    if (current == null ||
+        shiftIndex < 0 ||
+        shiftIndex >= current.shifts.length ||
+        newAlarmOffsetMinutes < 0 ||
+        newAlarmOffsetMinutes >= current.dutyMinutes) {
+      return;
+    }
+
+    final shifts = [...current.shifts];
+    final selected = shifts[shiftIndex];
+    if (customAlarmIndex == null) {
+      // Editing a fixed reminder converts this shift to a custom rule,
+      // so the selected time is preserved for every future cycle.
+      shifts[shiftIndex] = WorkShift(
+        name: selected.name,
+        startOffsetMinutes: selected.startOffsetMinutes,
+        endOffsetMinutes: selected.endOffsetMinutes,
+        useCustomAlarms: true,
+        customAlarmOffsetsMinutes: [newAlarmOffsetMinutes],
+      );
+    } else {
+      if (customAlarmIndex < 0 ||
+          customAlarmIndex >= selected.customAlarmOffsetsMinutes.length) {
+        return;
+      }
+      final offsets = [...selected.customAlarmOffsetsMinutes];
+      offsets[customAlarmIndex] = newAlarmOffsetMinutes;
+      offsets.sort();
+      shifts[shiftIndex] = WorkShift(
+        name: selected.name,
+        startOffsetMinutes: selected.startOffsetMinutes,
+        endOffsetMinutes: selected.endOffsetMinutes,
+        useCustomAlarms: true,
+        customAlarmOffsetsMinutes: offsets,
+      );
+    }
+
+    final updated = WorkPattern(
+      cycleStart: current.cycleStart,
+      dutyMinutes: current.dutyMinutes,
+      offMinutes: current.offMinutes,
+      alarmBeforeMinutes: current.alarmBeforeMinutes,
+      shifts: shifts,
+      ringtonePath: current.ringtonePath,
+      ringtoneName: current.ringtoneName,
     );
+    await PatternStorage.save(updated);
+    await AlarmService.replacePatternAlarms(updated);
+    if (!mounted) return;
+    setState(() => pattern = updated);
   }
 
   Future<void> _addShiftException({
