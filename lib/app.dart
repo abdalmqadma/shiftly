@@ -371,10 +371,17 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
 
     if (customAlarmIndex == null) {
       if (newAlarmOffsetMinutes > selected.startOffsetMinutes) return false;
-      // The fixed lead-time belongs to the whole pattern, so changing it
-      // updates every fixed shift in every repetition of the cycle.
-      alarmBeforeMinutes =
-          selected.startOffsetMinutes - newAlarmOffsetMinutes;
+      // A fixed reminder can be edited independently for this shift;
+      // the override is persisted and repeats in every future cycle.
+      shifts[shiftIndex] = WorkShift(
+        name: selected.name,
+        startOffsetMinutes: selected.startOffsetMinutes,
+        endOffsetMinutes: selected.endOffsetMinutes,
+        useCustomAlarms: false,
+        customAlarmOffsetsMinutes: selected.customAlarmOffsetsMinutes,
+        fixedAlarmBeforeMinutes:
+            selected.startOffsetMinutes - newAlarmOffsetMinutes,
+      );
     } else {
       if (customAlarmIndex < 0 ||
           customAlarmIndex >= selected.customAlarmOffsetsMinutes.length) {
@@ -407,6 +414,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
           endOffsetMinutes: shift.endOffsetMinutes,
           useCustomAlarms: true,
           customAlarmOffsetsMinutes: offsets,
+          fixedAlarmBeforeMinutes: shift.fixedAlarmBeforeMinutes,
         );
       }
     }
