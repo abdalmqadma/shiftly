@@ -159,14 +159,10 @@ class _SetupScreenState extends State<SetupScreen> {
       }
       final customOffsets = <int>[];
       if (draft.useCustomAlarms) {
-        if (draft.customAlarms.isEmpty) {
-          _error('أضف منبّهًا واحدًا على الأقل للشفت رقم ${draft.index + 1}');
-          return;
-        }
         for (final alarm in draft.customAlarms) {
           final offset = _offset(alarm.day, alarm.time);
-          if (offset < start || offset >= end) {
-            _error('مواعيد منبّهات الشفت رقم ${draft.index + 1} يجب أن تكون داخل وقت الشفت');
+          if (offset >= end) {
+            _error('موعد منبّه الشفت رقم ${draft.index + 1} يجب أن يكون قبل نهاية الشفت');
             return;
           }
           if (customOffsets.contains(offset)) {
