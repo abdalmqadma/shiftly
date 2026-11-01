@@ -24,6 +24,7 @@ class PatternStorage {
                   'end': shift.endOffsetMinutes,
                   'useCustomAlarms': shift.useCustomAlarms,
                   'customAlarmOffsetsMinutes': shift.customAlarmOffsetsMinutes,
+                  'fixedAlarmBeforeMinutes': shift.fixedAlarmBeforeMinutes,
                 })
             .toList(),
       }),
@@ -49,6 +50,8 @@ class PatternStorage {
                           ?.map((item) => item as int)
                           .toList() ??
                       const [],
+              fixedAlarmBeforeMinutes:
+                  value['fixedAlarmBeforeMinutes'] as int?,
             );
           })
           .toList();
