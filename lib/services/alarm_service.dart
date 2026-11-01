@@ -132,6 +132,12 @@ class AlarmService {
   static Future<void> replenishPatternAlarms(WorkPattern pattern) async {
     await requestPermissions();
 
+    final hasAnyPatternAlarms = pattern.shifts.any((shift) =>
+        shift.useCustomAlarms
+            ? shift.customAlarmOffsetsMinutes.isNotEmpty
+            : shift.fixedAlarmEnabled);
+    if (!hasAnyPatternAlarms) return;
+
     final existingIds = (await Alarm.getAlarms()).map((alarm) => alarm.id).toSet();
     final now = DateTime.now();
     var covered = 0;
