@@ -100,7 +100,10 @@ class WakeAlarmsScreen extends StatelessWidget {
           cycleBase.add(Duration(minutes: shift.startOffsetMinutes));
       final alarmOffsets = shift.useCustomAlarms
           ? shift.customAlarmOffsetsMinutes
-          : [shift.startOffsetMinutes - p.alarmBeforeMinutes];
+          : [
+              shift.startOffsetMinutes -
+                  (shift.fixedAlarmBeforeMinutes ?? p.alarmBeforeMinutes),
+            ];
 
       for (var alarmIndex = 0; alarmIndex < alarmOffsets.length; alarmIndex++) {
         final alarmTime =
