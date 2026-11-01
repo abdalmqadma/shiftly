@@ -24,10 +24,9 @@ class WakeAlarmsScreen extends StatelessWidget {
   final Future<void> Function(WakeAlarm alarm, bool enabled) onToggle;
   final Future<void> Function(WakeAlarm alarm) onDelete;
   final Future<void> Function({
-    required int alarmId,
-    required String title,
-    required DateTime oldTime,
-    required DateTime newTime,
+    required int shiftIndex,
+    required int? customAlarmIndex,
+    required int newAlarmOffsetMinutes,
   }) onEditTodayShiftAlarm;
 
   @override
@@ -43,12 +42,12 @@ class WakeAlarmsScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900)),
             const SizedBox(height: 6),
             Text(
-              'منبّهاتك اليدوية + تنبيهات شفتات اليوم في مكان واحد.',
+              'منبّهاتك اليدوية + جميع تنبيهات دورة الشفتات في مكان واحد.',
               style: TextStyle(color: scheme.onSurfaceVariant),
             ),
             if (shifts.isNotEmpty) ...[
               const SizedBox(height: 22),
-              _sectionTitle('شفتات اليوم', Icons.work_history_rounded),
+              _sectionTitle('منبّهات دورة الشفتات', Icons.work_history_rounded),
               const SizedBox(height: 10),
               ...shifts.map((item) => _shiftAlarmCard(context, item)),
             ],
@@ -84,27 +83,32 @@ class WakeAlarmsScreen extends StatelessWidget {
     final p = pattern;
     if (p == null) return const [];
     final now = DateTime.now();
-    final startOfDay = DateTime(now.year, now.month, now.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
-    final elapsed = startOfDay.difference(p.cycleStart).inMinutes;
-    final baseIndex = elapsed ~/ p.cycleMinutes;
+    final elapsed = now.difference(p.cycleStart).inMinutes;
+    final cycleIndex = elapsed ~/ p.cycleMinutes;
+    final cycleBase =
+        p.cycleStart.add(Duration(minutes: cycleIndex * p.cycleMinutes));
     final result = <_TodayShiftAlarm>[];
 
-    for (var index = baseIndex - 1; index <= baseIndex + 1; index++) {
-      final base = p.cycleStart.add(Duration(minutes: index * p.cycleMinutes));
-      for (final shift in p.shifts) {
-        final shiftStart = base.add(Duration(minutes: shift.startOffsetMinutes));
-        if (shiftStart.isBefore(startOfDay) || !shiftStart.isBefore(endOfDay)) {
-          continue;
-        }
+    for (var shiftIndex = 0; shiftIndex < p.shifts.length; shiftIndex++) {
+      final shift = p.shifts[shiftIndex];
+      final shiftStart =
+          cycleBase.add(Duration(minutes: shift.startOffsetMinutes));
+      final alarmOffsets = shift.useCustomAlarms
+          ? shift.customAlarmOffsetsMinutes
+          : [shift.startOffsetMinutes - p.alarmBeforeMinutes];
+
+      for (var alarmIndex = 0; alarmIndex < alarmOffsets.length; alarmIndex++) {
         final alarmTime =
-            shiftStart.subtract(Duration(minutes: p.alarmBeforeMinutes));
-        if (!alarmTime.isAfter(now)) continue;
+            cycleBase.add(Duration(minutes: alarmOffsets[alarmIndex]));
         result.add(_TodayShiftAlarm(
           id: AlarmService.patternAlarmIdFor(alarmTime),
           title: shift.name,
           shiftStart: shiftStart,
           alarmTime: alarmTime,
+          cycleBase: cycleBase,
+          shiftIndex: shiftIndex,
+          customAlarmIndex: shift.useCustomAlarms ? alarmIndex : null,
+          passed: !alarmTime.isAfter(now),
         ));
       }
     }
@@ -144,7 +148,7 @@ class WakeAlarmsScreen extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
               Text(
-                'بداية الشفت ${_formatTime(item.shiftStart)} • يختفي بعد الرنين',
+                'بداية الشفت ${_formatTime(item.shiftStart)} • ${item.passed ? 'مرّ موعده' : 'ضمن الدورة الحالية'}',
                 style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
               ),
             ],
@@ -318,7 +322,7 @@ class WakeAlarmsScreen extends StatelessWidget {
     final picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(item.alarmTime),
-      helpText: 'تعديل تنبيه هذا الشفت فقط',
+      helpText: 'تعديل هذا التنبيه في إعدادات الدورة',
     );
     if (picked == null) return;
     final newTime = DateTime(
@@ -329,14 +333,13 @@ class WakeAlarmsScreen extends StatelessWidget {
       picked.minute,
     );
     await onEditTodayShiftAlarm(
-      alarmId: item.id,
-      title: item.title,
-      oldTime: item.alarmTime,
-      newTime: newTime,
+      shiftIndex: item.shiftIndex,
+      customAlarmIndex: item.customAlarmIndex,
+      newAlarmOffsetMinutes: newTime.difference(item.cycleBase).inMinutes,
     );
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم تعديل تنبيه شفت اليوم')),
+        const SnackBar(content: Text('تم حفظ التعديل على إعدادات الدورة')),
       );
     }
   }
@@ -391,10 +394,18 @@ class _TodayShiftAlarm {
     required this.title,
     required this.shiftStart,
     required this.alarmTime,
+    required this.cycleBase,
+    required this.shiftIndex,
+    required this.customAlarmIndex,
+    required this.passed,
   });
 
   final int id;
   final String title;
   final DateTime shiftStart;
   final DateTime alarmTime;
+  final DateTime cycleBase;
+  final int shiftIndex;
+  final int? customAlarmIndex;
+  final bool passed;
 }
