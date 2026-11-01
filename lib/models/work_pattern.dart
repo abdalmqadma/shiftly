@@ -3,11 +3,21 @@ class WorkShift {
     required this.name,
     required this.startOffsetMinutes,
     required this.endOffsetMinutes,
+    this.useCustomAlarms = false,
+    this.customAlarmOffsetsMinutes = const [],
   });
 
   final String name;
   final int startOffsetMinutes;
   final int endOffsetMinutes;
+
+  /// When true, this shift uses its own alarm times instead of the
+  /// pattern-wide "minutes before shift" reminder.
+  final bool useCustomAlarms;
+
+  /// Alarm times as minute offsets from the beginning of the work cycle.
+  /// They are repeated whenever this shift occurs in a later cycle.
+  final List<int> customAlarmOffsetsMinutes;
 }
 
 class WorkPattern {
