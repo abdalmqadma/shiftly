@@ -366,7 +366,6 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     }
 
     final shifts = [...current.shifts];
-    var alarmBeforeMinutes = current.alarmBeforeMinutes;
     final selected = shifts[shiftIndex];
 
     if (customAlarmIndex == null) {
@@ -423,7 +422,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
       cycleStart: current.cycleStart,
       dutyMinutes: current.dutyMinutes,
       offMinutes: current.offMinutes,
-      alarmBeforeMinutes: alarmBeforeMinutes,
+      alarmBeforeMinutes: current.alarmBeforeMinutes,
       shifts: shifts,
       ringtonePath: current.ringtonePath,
       ringtoneName: current.ringtoneName,
