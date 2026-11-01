@@ -152,7 +152,7 @@ class WakeAlarmsScreen extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
               Text(
-                'بداية الشفت ${_formatTime(item.shiftStart)} • ${item.passed ? 'مرّ موعده' : 'ضمن الدورة الحالية'}',
+                '${_weekday(item.shiftStart.weekday)} ${item.shiftStart.day}/${item.shiftStart.month} • بداية الشفت ${_formatTime(item.shiftStart)} • ${item.passed ? 'مرّ موعده' : 'ضمن الدورة الحالية'}',
                 style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
               ),
             ],
@@ -371,6 +371,19 @@ class WakeAlarmsScreen extends StatelessWidget {
     } else {
       await onUpdate(saved);
     }
+  }
+
+  String _weekday(int day) {
+    const names = {
+      1: 'الإثنين',
+      2: 'الثلاثاء',
+      3: 'الأربعاء',
+      4: 'الخميس',
+      5: 'الجمعة',
+      6: 'السبت',
+      7: 'الأحد',
+    };
+    return names[day] ?? '';
   }
 
   String _formatTime(DateTime value) => _formatClock(value.hour, value.minute);
