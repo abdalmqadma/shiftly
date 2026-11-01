@@ -23,7 +23,7 @@ class WakeAlarmsScreen extends StatelessWidget {
   final Future<void> Function(WakeAlarm alarm) onUpdate;
   final Future<void> Function(WakeAlarm alarm, bool enabled) onToggle;
   final Future<void> Function(WakeAlarm alarm) onDelete;
-  final Future<void> Function({
+  final Future<bool> Function({
     required int shiftIndex,
     required int? customAlarmIndex,
     required int newAlarmOffsetMinutes,
@@ -332,14 +332,18 @@ class WakeAlarmsScreen extends StatelessWidget {
       picked.hour,
       picked.minute,
     );
-    await onEditTodayShiftAlarm(
+    final saved = await onEditTodayShiftAlarm(
       shiftIndex: item.shiftIndex,
       customAlarmIndex: item.customAlarmIndex,
       newAlarmOffsetMinutes: newTime.difference(item.cycleBase).inMinutes,
     );
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم حفظ التعديل على إعدادات الدورة')),
+        SnackBar(
+          content: Text(saved
+              ? 'تم حفظ التعديل وتطبيقه على نظائر المنبّه في الدورة'
+              : 'الوقت المختار خارج مدة الشفت أو الدورة'),
+        ),
       );
     }
   }
