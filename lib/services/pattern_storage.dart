@@ -22,6 +22,8 @@ class PatternStorage {
                   'name': shift.name,
                   'start': shift.startOffsetMinutes,
                   'end': shift.endOffsetMinutes,
+                  'useCustomAlarms': shift.useCustomAlarms,
+                  'customAlarmOffsetsMinutes': shift.customAlarmOffsetsMinutes,
                 })
             .toList(),
       }),
@@ -41,6 +43,12 @@ class PatternStorage {
               name: value['name'] as String,
               startOffsetMinutes: value['start'] as int,
               endOffsetMinutes: value['end'] as int,
+              useCustomAlarms: value['useCustomAlarms'] as bool? ?? false,
+              customAlarmOffsetsMinutes:
+                  (value['customAlarmOffsetsMinutes'] as List<dynamic>?)
+                          ?.map((item) => item as int)
+                          .toList() ??
+                      const [],
             );
           })
           .toList();
