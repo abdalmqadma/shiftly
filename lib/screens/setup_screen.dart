@@ -95,14 +95,18 @@ class _SetupScreenState extends State<SetupScreen> {
         cycleStart.add(Duration(minutes: _offset(draft.startDay, draft.start)));
     final shiftEnd =
         cycleStart.add(Duration(minutes: _offset(draft.endDay, draft.end)));
-    final lastAlarm = draft.customAlarms.isEmpty
-        ? shiftStart
-        : draft.customAlarms
-            .map((alarm) => cycleStart.add(
-                Duration(minutes: _offset(alarm.day, alarm.time))))
-            .reduce((a, b) => a.isAfter(b) ? a : b);
-    final proposed = lastAlarm.add(const Duration(minutes: 30));
-    final chosen = proposed.isBefore(shiftEnd) ? proposed : shiftStart;
+    final usedTimes = draft.customAlarms
+        .map((alarm) => cycleStart.add(
+            Duration(minutes: _offset(alarm.day, alarm.time))))
+        .toSet();
+    var chosen = shiftStart.add(const Duration(minutes: 30));
+    while (chosen.isBefore(shiftEnd) && usedTimes.contains(chosen)) {
+      chosen = chosen.add(const Duration(minutes: 30));
+    }
+    if (!chosen.isBefore(shiftEnd)) {
+      _error('لا توجد مساحة لإضافة منبّه آخر قبل نهاية الشفت');
+      return;
+    }
     final cycleMidnight =
         DateTime(cycleStart.year, cycleStart.month, cycleStart.day);
     final day = chosen.difference(cycleMidnight).inDays + 1;
