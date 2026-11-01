@@ -25,6 +25,7 @@ class PatternStorage {
                   'useCustomAlarms': shift.useCustomAlarms,
                   'customAlarmOffsetsMinutes': shift.customAlarmOffsetsMinutes,
                   'fixedAlarmBeforeMinutes': shift.fixedAlarmBeforeMinutes,
+                  'fixedAlarmEnabled': shift.fixedAlarmEnabled,
                 })
             .toList(),
       }),
@@ -52,6 +53,7 @@ class PatternStorage {
                       const [],
               fixedAlarmBeforeMinutes:
                   value['fixedAlarmBeforeMinutes'] as int?,
+              fixedAlarmEnabled: value['fixedAlarmEnabled'] as bool? ?? true,
             );
           })
           .toList();
