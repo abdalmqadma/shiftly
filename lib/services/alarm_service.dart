@@ -230,10 +230,10 @@ class AlarmService {
   // manual, prayer, exception, and test alarms. Use epoch minutes rather
   // than milliseconds so the ID cycle is centuries long, not ~10 days.
   static int patternAlarmIdFor(DateTime time) =>
-      2000000000 +
+      2050000000 +
       (time.millisecondsSinceEpoch ~/ 60000)
           .remainder(147483647);
 
   static bool isPatternAlarmId(int id) =>
-      id >= 2000000000 && id <= 2147483646;
+      id >= 2050000000 && id <= 2147483646;
 }
