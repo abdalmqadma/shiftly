@@ -39,7 +39,7 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Normalize Dart formatting
+      - name: Verify Dart formatting
         run: dart format --output=none --set-exit-if-changed lib test
 
       - name: Analyze
@@ -49,7 +49,7 @@ jobs:
         run: flutter test
 
       - name: Build debug APK
-        run: flutter build apk --debug
+        run: flutter build apk --debug --target-platform android-arm64
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
