@@ -145,23 +145,33 @@ class AlarmService {
       for (final shift in pattern.shifts) {
         final shiftStart =
             base.add(Duration(minutes: shift.startOffsetMinutes));
-        final alarmTime =
-            shiftStart.subtract(Duration(minutes: pattern.alarmBeforeMinutes));
+        final alarmTimes = shift.useCustomAlarms
+            ? shift.customAlarmOffsetsMinutes.map(
+                (offset) => base.add(Duration(minutes: offset)),
+              )
+            : [
+                shiftStart.subtract(
+                  Duration(minutes: pattern.alarmBeforeMinutes),
+                ),
+              ];
 
-        if (!alarmTime.isAfter(now)) continue;
+        for (final alarmTime in alarmTimes) {
+          if (!alarmTime.isAfter(now)) continue;
 
-        final id = patternAlarmIdFor(alarmTime);
-        if (!existingIds.contains(id)) {
-          await _set(
-            id: id,
-            dateTime: alarmTime,
-            title: shift.name,
-            audioPath: pattern.ringtonePath,
-          );
-          existingIds.add(id);
+          final id = patternAlarmIdFor(alarmTime);
+          if (!existingIds.contains(id)) {
+            await _set(
+              id: id,
+              dateTime: alarmTime,
+              title: shift.name,
+              audioPath: pattern.ringtonePath,
+            );
+            existingIds.add(id);
+          }
+
+          covered++;
+          if (covered == _patternQueueSize) break;
         }
-
-        covered++;
         if (covered == _patternQueueSize) break;
       }
       cycleIndex++;
