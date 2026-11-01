@@ -368,7 +368,6 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     if (current == null ||
         shiftIndex < 0 ||
         shiftIndex >= current.shifts.length ||
-        newAlarmOffsetMinutes < 0 ||
         newAlarmOffsetMinutes >= current.dutyMinutes) {
       return false;
     }
