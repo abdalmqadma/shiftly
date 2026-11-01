@@ -264,6 +264,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
       final navigator = navigatorKey.currentState;
       if (navigator == null) {
         activeAlarmId = null;
+        unawaited(_showNextRingingAlarm());
         return;
       }
       navigator.push(MaterialPageRoute<void>(
