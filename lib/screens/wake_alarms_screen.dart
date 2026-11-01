@@ -46,7 +46,7 @@ class WakeAlarmsScreen extends StatelessWidget {
             ),
             if (shifts.isNotEmpty) ...[
               const SizedBox(height: 22),
-              _sectionTitle('منبّهات دورة الشفتات', Icons.work_history_rounded),
+              _sectionTitle('منبّهات دورة الشفتات القادمة', Icons.work_history_rounded),
               const SizedBox(height: 10),
               ...shifts.map((item) => _shiftAlarmCard(context, item)),
             ],
@@ -83,7 +83,13 @@ class WakeAlarmsScreen extends StatelessWidget {
     if (p == null) return const [];
     final now = DateTime.now();
     final elapsed = now.difference(p.cycleStart).inMinutes;
-    final cycleIndex = elapsed ~/ p.cycleMinutes;
+    var cycleIndex = elapsed < 0 ? 0 : elapsed ~/ p.cycleMinutes;
+    final cycleOffset = elapsed < 0
+        ? 0
+        : elapsed - (cycleIndex * p.cycleMinutes);
+    // During the rest portion, show the next complete work cycle rather
+    // than leaving the user with only already-passed alarms.
+    if (cycleOffset >= p.dutyMinutes) cycleIndex++;
     final cycleBase =
         p.cycleStart.add(Duration(minutes: cycleIndex * p.cycleMinutes));
     final result = <_TodayShiftAlarm>[];
