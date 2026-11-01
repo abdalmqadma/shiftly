@@ -37,11 +37,10 @@ class MainShell extends StatefulWidget {
   final Future<void> Function(WakeAlarm alarm) onUpdateAlarm;
   final Future<void> Function(WakeAlarm alarm, bool enabled) onToggleAlarm;
   final Future<void> Function(WakeAlarm alarm) onDeleteAlarm;
-  final Future<void> Function({
-    required int alarmId,
-    required String title,
-    required DateTime oldTime,
-    required DateTime newTime,
+  final Future<bool> Function({
+    required int shiftIndex,
+    required int? customAlarmIndex,
+    required int newAlarmOffsetMinutes,
   }) onEditTodayShiftAlarm;
   final Future<void> Function({
     required String title,

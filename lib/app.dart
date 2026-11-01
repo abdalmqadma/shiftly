@@ -42,6 +42,8 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
   bool editingPattern = false;
   bool loaded = false;
   int? activeAlarmId;
+  final List<int> pendingRingingAlarmIds = [];
+  bool resolvingRingingAlarm = false;
   Uri? pendingPrayerLink;
   StreamSubscription<dynamic>? ringingSubscription;
   StreamSubscription<Uri>? linkSubscription;
@@ -53,8 +55,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     _initLinks();
     ringingSubscription = Alarm.ringing.listen((alarmSet) {
       for (final alarm in alarmSet.alarms) {
-        unawaited(_handleRingingAlarm(alarm.id));
-        break;
+        _queueRingingAlarm(alarm.id);
       }
     });
   }
@@ -163,7 +164,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
 
     final loadedPattern = values[0] as WorkPattern?;
     if (loadedPattern != null) {
-      unawaited(AlarmService.replenishPatternAlarms(loadedPattern));
+      unawaited(AlarmService.replacePatternAlarms(loadedPattern));
     }
     unawaited(PrayerAlarmService.replenishAll());
 
@@ -189,22 +190,46 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     setState(() => themeMode = mode);
   }
 
-  Future<void> _handleRingingAlarm(int alarmId) async {
-    if (PrayerAlarmService.isPrayerAlarmId(alarmId)) {
-      final rules = await PrayerAlarmStorage.load();
-      PrayerAlarmRule? rule;
-      for (final item in rules) {
-        if (item.alarmId == alarmId) {
-          rule = item;
-          break;
+  void _queueRingingAlarm(int alarmId) {
+    if (activeAlarmId == alarmId ||
+        pendingRingingAlarmIds.contains(alarmId)) {
+      return;
+    }
+    pendingRingingAlarmIds.add(alarmId);
+    unawaited(_showNextRingingAlarm());
+  }
+
+  Future<void> _showNextRingingAlarm() async {
+    if (activeAlarmId != null ||
+        resolvingRingingAlarm ||
+        pendingRingingAlarmIds.isEmpty) {
+      return;
+    }
+
+    resolvingRingingAlarm = true;
+    final alarmId = pendingRingingAlarmIds.removeAt(0);
+    var useSimpleDismiss = false;
+    try {
+      if (PrayerAlarmService.isPrayerAlarmId(alarmId)) {
+        final rules = await PrayerAlarmStorage.load();
+        for (final rule in rules) {
+          if (rule.alarmId == alarmId) {
+            useSimpleDismiss = !rule.challengeEnabled;
+            break;
+          }
         }
       }
-      if (rule != null && !rule.challengeEnabled) {
-        _openSimpleDismiss(alarmId);
-        return;
-      }
+    } catch (_) {
+      // If prayer settings cannot be read, still show the full challenge.
+    } finally {
+      resolvingRingingAlarm = false;
     }
-    _openChallenge(alarmId);
+
+    if (useSimpleDismiss) {
+      _openSimpleDismiss(alarmId);
+    } else {
+      _openChallenge(alarmId);
+    }
   }
 
   void _openSimpleDismiss(int alarmId) {
@@ -214,6 +239,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
       final navigator = navigatorKey.currentState;
       if (navigator == null) {
         activeAlarmId = null;
+        unawaited(_showNextRingingAlarm());
         return;
       }
       navigator.push(MaterialPageRoute<void>(
@@ -224,6 +250,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
             activeAlarmId = null;
             navigator.pop();
             unawaited(_handleAlarmCompleted(alarmId));
+            unawaited(_showNextRingingAlarm());
           },
         ),
       ));
@@ -237,6 +264,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
       final navigator = navigatorKey.currentState;
       if (navigator == null) {
         activeAlarmId = null;
+        unawaited(_showNextRingingAlarm());
         return;
       }
       navigator.push(MaterialPageRoute<void>(
@@ -247,6 +275,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
             activeAlarmId = null;
             navigator.pop();
             unawaited(_handleAlarmCompleted(alarmId));
+            unawaited(_showNextRingingAlarm());
           },
         ),
       ));
@@ -330,19 +359,86 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     setState(() => alarms = updated);
   }
 
-  Future<void> _editTodayShiftAlarm({
-    required int alarmId,
-    required String title,
-    required DateTime oldTime,
-    required DateTime newTime,
+  Future<bool> _editTodayShiftAlarm({
+    required int shiftIndex,
+    required int? customAlarmIndex,
+    required int newAlarmOffsetMinutes,
   }) async {
-    await AlarmService.rescheduleOneTimeShiftAlarm(
-      id: alarmId,
-      title: title,
-      oldTime: oldTime,
-      newTime: newTime,
-      audioPath: pattern?.ringtonePath,
+    final current = pattern;
+    if (current == null ||
+        shiftIndex < 0 ||
+        shiftIndex >= current.shifts.length ||
+        newAlarmOffsetMinutes >= current.dutyMinutes) {
+      return false;
+    }
+
+    final shifts = [...current.shifts];
+    final selected = shifts[shiftIndex];
+
+    if (customAlarmIndex == null) {
+      if (newAlarmOffsetMinutes > selected.startOffsetMinutes) return false;
+      // A fixed reminder can be edited independently for this shift;
+      // the override is persisted and repeats in every future cycle.
+      shifts[shiftIndex] = WorkShift(
+        name: selected.name,
+        startOffsetMinutes: selected.startOffsetMinutes,
+        endOffsetMinutes: selected.endOffsetMinutes,
+        useCustomAlarms: false,
+        customAlarmOffsetsMinutes: selected.customAlarmOffsetsMinutes,
+        fixedAlarmBeforeMinutes:
+            selected.startOffsetMinutes - newAlarmOffsetMinutes,
+      );
+    } else {
+      if (customAlarmIndex < 0 ||
+          customAlarmIndex >= selected.customAlarmOffsetsMinutes.length) {
+        return false;
+      }
+
+      final oldOffset =
+          selected.customAlarmOffsetsMinutes[customAlarmIndex];
+      final delta = newAlarmOffsetMinutes - oldOffset;
+
+      // The same alarm slot is treated as a counterpart across cycle days.
+      // Apply the time change (delta) to every shift that has this slot.
+      for (var index = 0; index < shifts.length; index++) {
+        final shift = shifts[index];
+        if (!shift.useCustomAlarms ||
+            customAlarmIndex >= shift.customAlarmOffsetsMinutes.length) {
+          continue;
+        }
+        final offsets = [...shift.customAlarmOffsetsMinutes];
+        final changed = offsets[customAlarmIndex] + delta;
+        if (changed < shift.startOffsetMinutes ||
+            changed >= shift.endOffsetMinutes) {
+          return false;
+        }
+        offsets[customAlarmIndex] = changed;
+        offsets.sort();
+        shifts[index] = WorkShift(
+          name: shift.name,
+          startOffsetMinutes: shift.startOffsetMinutes,
+          endOffsetMinutes: shift.endOffsetMinutes,
+          useCustomAlarms: true,
+          customAlarmOffsetsMinutes: offsets,
+          fixedAlarmBeforeMinutes: shift.fixedAlarmBeforeMinutes,
+        );
+      }
+    }
+
+    final updated = WorkPattern(
+      cycleStart: current.cycleStart,
+      dutyMinutes: current.dutyMinutes,
+      offMinutes: current.offMinutes,
+      alarmBeforeMinutes: current.alarmBeforeMinutes,
+      shifts: shifts,
+      ringtonePath: current.ringtonePath,
+      ringtoneName: current.ringtoneName,
     );
+    await PatternStorage.save(updated);
+    await AlarmService.replacePatternAlarms(updated);
+    if (!mounted) return false;
+    setState(() => pattern = updated);
+    return true;
   }
 
   Future<void> _addShiftException({

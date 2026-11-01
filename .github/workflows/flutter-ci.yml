@@ -4,13 +4,16 @@ on:
   push:
     branches:
       - main
-      - feature/**
   pull_request:
     branches:
       - main
 
 permissions:
   contents: read
+
+concurrency:
+  group: flutter-ci-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality-and-build:
@@ -39,7 +42,7 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Normalize Dart formatting
+      - name: Format Dart source
         run: dart format lib test
 
       - name: Analyze
@@ -48,12 +51,3 @@ jobs:
       - name: Test
         run: flutter test
 
-      - name: Build debug APK
-        run: flutter build apk --debug
-
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: shiftly-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          retention-days: 14

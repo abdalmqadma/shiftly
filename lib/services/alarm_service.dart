@@ -145,23 +145,36 @@ class AlarmService {
       for (final shift in pattern.shifts) {
         final shiftStart =
             base.add(Duration(minutes: shift.startOffsetMinutes));
-        final alarmTime =
-            shiftStart.subtract(Duration(minutes: pattern.alarmBeforeMinutes));
+        final alarmTimes = shift.useCustomAlarms
+            ? shift.customAlarmOffsetsMinutes.map(
+                (offset) => base.add(Duration(minutes: offset)),
+              )
+            : [
+                shiftStart.subtract(
+                  Duration(
+                    minutes: shift.fixedAlarmBeforeMinutes ??
+                        pattern.alarmBeforeMinutes,
+                  ),
+                ),
+              ];
 
-        if (!alarmTime.isAfter(now)) continue;
+        for (final alarmTime in alarmTimes) {
+          if (!alarmTime.isAfter(now)) continue;
 
-        final id = patternAlarmIdFor(alarmTime);
-        if (!existingIds.contains(id)) {
-          await _set(
-            id: id,
-            dateTime: alarmTime,
-            title: shift.name,
-            audioPath: pattern.ringtonePath,
-          );
-          existingIds.add(id);
+          final id = patternAlarmIdFor(alarmTime);
+          if (!existingIds.contains(id)) {
+            await _set(
+              id: id,
+              dateTime: alarmTime,
+              title: shift.name,
+              audioPath: pattern.ringtonePath,
+            );
+            existingIds.add(id);
+          }
+
+          covered++;
+          if (covered == _patternQueueSize) break;
         }
-
-        covered++;
         if (covered == _patternQueueSize) break;
       }
       cycleIndex++;
@@ -195,6 +208,8 @@ class AlarmService {
         androidFullScreenIntent: true,
         androidStopAlarmOnTermination: false,
         androidStaleAfter: const Duration(minutes: 15),
+        allowAlarmOverlap: false,
+        allowSameSecondScheduling: true,
         volumeSettings: VolumeSettings.fade(
           volume: 1,
           fadeDuration: const Duration(seconds: 12),
@@ -211,8 +226,14 @@ class AlarmService {
     );
   }
 
+  // Keep pattern alarms in a dedicated positive-int range, separate from
+  // manual, prayer, exception, and test alarms. Use epoch minutes rather
+  // than milliseconds so the ID cycle is centuries long, not ~10 days.
   static int patternAlarmIdFor(DateTime time) =>
-      time.millisecondsSinceEpoch.remainder(900000000) + 10000000;
+      2050000000 +
+      (time.millisecondsSinceEpoch ~/ 60000)
+          .remainder(147483647);
 
-  static bool isPatternAlarmId(int id) => id >= 10000000 && id < 910000000;
+  static bool isPatternAlarmId(int id) =>
+      id >= 2050000000 && id <= 2147483646;
 }
