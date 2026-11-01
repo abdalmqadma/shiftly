@@ -363,13 +363,13 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     required int shiftIndex,
     required int? customAlarmIndex,
     required int newAlarmOffsetMinutes,
-    bool deleteAlarm = false,
+    bool? deleteAlarm,
   }) async {
     final current = pattern;
     if (current == null ||
         shiftIndex < 0 ||
         shiftIndex >= current.shifts.length ||
-        (!deleteAlarm && newAlarmOffsetMinutes >= current.dutyMinutes)) {
+        (deleteAlarm != true && newAlarmOffsetMinutes >= current.dutyMinutes)) {
       return false;
     }
 
@@ -377,7 +377,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
     final selected = shifts[shiftIndex];
 
     if (customAlarmIndex == null) {
-      if (deleteAlarm) {
+      if (deleteAlarm == true) {
         shifts[shiftIndex] = WorkShift(
           name: selected.name,
           startOffsetMinutes: selected.startOffsetMinutes,
@@ -421,7 +421,7 @@ class _ShiftlyAppState extends State<ShiftlyApp> {
           continue;
         }
         final offsets = [...shift.customAlarmOffsetsMinutes];
-        if (deleteAlarm) {
+        if (deleteAlarm == true) {
           offsets.removeAt(customAlarmIndex);
         } else {
           final changed = offsets[customAlarmIndex] + delta;
