@@ -17,6 +17,12 @@ class SetupScreen extends StatefulWidget {
   State<SetupScreen> createState() => _SetupScreenState();
 }
 
+class _ShiftAlarmDraft {
+  _ShiftAlarmDraft({required this.day, required this.time});
+  int day;
+  TimeOfDay time;
+}
+
 class _ShiftDraft {
   _ShiftDraft(this.index);
   final int index;
@@ -24,6 +30,8 @@ class _ShiftDraft {
   int endDay = 1;
   TimeOfDay start = const TimeOfDay(hour: 8, minute: 0);
   TimeOfDay end = const TimeOfDay(hour: 16, minute: 0);
+  bool useCustomAlarms = false;
+  final List<_ShiftAlarmDraft> customAlarms = [];
 }
 
 class _SetupScreenState extends State<SetupScreen> {
@@ -66,6 +74,25 @@ class _SetupScreenState extends State<SetupScreen> {
     setState(() => start ? draft.start = value : draft.end = value);
   }
 
+  Future<void> _pickCustomAlarmTime(_ShiftAlarmDraft alarm) async {
+    final value = await showTimePicker(
+      context: context,
+      initialTime: alarm.time,
+    );
+    if (value == null) return;
+    setState(() => alarm.time = value);
+  }
+
+  void _addCustomAlarm(_ShiftDraft draft) {
+    setState(() {
+      draft.customAlarms.add(_ShiftAlarmDraft(
+        day: draft.startDay,
+        time: draft.start,
+      ));
+      draft.useCustomAlarms = true;
+    });
+  }
+
   int _offset(int day, TimeOfDay time) {
     final cycleStart = DateTime(
       _startDate.year,
@@ -103,10 +130,32 @@ class _SetupScreenState extends State<SetupScreen> {
         _error('الشِفت رقم ${draft.index + 1} يتجاوز مدة الدوام');
         return;
       }
+      final customOffsets = <int>[];
+      if (draft.useCustomAlarms) {
+        if (draft.customAlarms.isEmpty) {
+          _error('أضف منبّهًا واحدًا على الأقل للشفت رقم ${draft.index + 1}');
+          return;
+        }
+        for (final alarm in draft.customAlarms) {
+          final offset = _offset(alarm.day, alarm.time);
+          if (offset < start || offset >= end) {
+            _error('مواعيد منبّهات الشفت رقم ${draft.index + 1} يجب أن تكون داخل وقت الشفت');
+            return;
+          }
+          if (customOffsets.contains(offset)) {
+            _error('يوجد منبّهان في نفس الوقت داخل الشفت رقم ${draft.index + 1}');
+            return;
+          }
+          customOffsets.add(offset);
+        }
+        customOffsets.sort();
+      }
       shifts.add(WorkShift(
         name: 'الشِفت ${draft.index + 1}',
         startOffsetMinutes: start,
         endOffsetMinutes: end,
+        useCustomAlarms: draft.useCustomAlarms,
+        customAlarmOffsetsMinutes: customOffsets,
       ));
     }
 
@@ -322,10 +371,88 @@ class _SetupScreenState extends State<SetupScreen> {
                   ),
                 ),
               ]),
+              const Divider(height: 28),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('تخصيص منبّهات هذا الشفت'),
+                subtitle: Text(draft.useCustomAlarms
+                    ? 'حدد أوقات الرنين بنفسك داخل مدة الشفت'
+                    : 'استخدام التنبيه الثابت قبل الشفت'),
+                value: draft.useCustomAlarms,
+                onChanged: (value) => setState(() {
+                  draft.useCustomAlarms = value;
+                  if (value && draft.customAlarms.isEmpty) {
+                    draft.customAlarms.add(_ShiftAlarmDraft(
+                      day: draft.startDay,
+                      time: draft.start,
+                    ));
+                  }
+                }),
+              ),
+              if (draft.useCustomAlarms) ...[
+                const SizedBox(height: 8),
+                ...draft.customAlarms.asMap().entries.map((entry) =>
+                    _customAlarmRow(draft, entry.key, entry.value)),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => _addCustomAlarm(draft),
+                    icon: const Icon(Icons.add_alarm_rounded),
+                    label: const Text('إضافة وقت تنبيه'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       );
+
+  Widget _customAlarmRow(
+    _ShiftDraft draft,
+    int index,
+    _ShiftAlarmDraft alarm,
+  ) {
+    final dutyMinutes = int.parse(_dutyController.text) * 60;
+    final startMinute = _startTime.hour * 60 + _startTime.minute;
+    final dutyDays =
+        ((startMinute + dutyMinutes + 1439) ~/ 1440).clamp(1, 30);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(children: [
+        Expanded(
+          flex: 2,
+          child: DropdownButtonFormField<int>(
+            initialValue: alarm.day.clamp(1, dutyDays),
+            decoration: const InputDecoration(labelText: 'اليوم'),
+            items: List.generate(
+              dutyDays,
+              (i) => DropdownMenuItem(
+                value: i + 1,
+                child: Text('اليوم ${i + 1}'),
+              ),
+            ),
+            onChanged: (value) {
+              if (value != null) setState(() => alarm.day = value);
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 3,
+          child: OutlinedButton(
+            onPressed: () => _pickCustomAlarmTime(alarm),
+            child: Text(alarm.time.format(context)),
+          ),
+        ),
+        IconButton(
+          tooltip: 'حذف وقت التنبيه',
+          onPressed: () => setState(() => draft.customAlarms.removeAt(index)),
+          icon: const Icon(Icons.delete_outline_rounded,
+              color: AppColors.danger),
+        ),
+      ]),
+    );
+  }
 
   Widget _dayPicker(_ShiftDraft draft, bool start) {
     final dutyMinutes = int.parse(_dutyController.text) * 60;
